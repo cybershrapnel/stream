@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download and Rebuild File from Blockchain</title>
+    <style>
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+    </style>
+    <script>
+        let mediaSource;
+        let sourceBuffer;
+        let queue = [];
+        let fileData = '';
+        let bufferCount = 0;
+        let audioElement;
+        const INITIAL_PLAYBACK_START = 300;
+        const BUFFER_UPDATE_INTERVAL = 200;
+
+        function updateConsoleOutput(message) {
+            const consoleOutput = document.getElementById('consoleOutput');
+            consoleOutput.value += message + '\n';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        async function fetchTransactionData(txid) {
+            const proxyUrl = `http://68.186.91.164:8111/getrawtransaction?txid=${txid}&decrypt=1`;
+
+            try {
+                const response = await fetch(proxyUrl, { method: 'GET' });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.result;
+            } catch (error) {
+                console.error('Error fetching transaction data:', error);
+                throw error;
+            }
+        }
+
+        async function downloadAndRebuildFile() {
+            const startTxid = document.getElementById('txid').value.trim();
+            if (!startTxid) {
+                updateConsoleOutput('No txid provided.');
+                return;
+            }
+
+            // Reset buffer and counters
+            fileData = '';
+            queue = [];
+            bufferCount = 0;
+            if (mediaSource && mediaSource.readyState === 'open') {
+                mediaSource.endOfStream();
+            }
+            initializeMediaSource();
+
+            let currentTxid = startTxid;
+            let iterationCount = 0;
+
+            try {
+                while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
+                    const iterationMessage = `Iteration ${iterationCount}: Processing txid: ${currentTxid}`;
+                    //console.log(iterationMessage);
+
+                    if (iterationCount % 100 === 0) {
+                        updateConsoleOutput(iterationMessage);
+                    }
+
+                    let transactionData;
+                    try {
+                        transactionData = await fetchTransactionData(currentTxid);
+                    } catch (error) {
+                        console.error('Error fetching transaction data, treating as end of file:', error);
+                        break;
+                    }
+
+                    let foundNextTxid = false;
+                    for (const vout of transactionData.vout) {
+                        if (vout.scriptPubKey.asm.startsWith('OP_RETURN')) {
+                            const opReturnData = vout.scriptPubKey.asm.split(' ')[1];
+
+                            if (opReturnData.length >= 64) {
+                                currentTxid = opReturnData.substring(0, 64);
+                                foundNextTxid = true;
+                                const fileChunk = opReturnData.substring(64);
+                                fileData += fileChunk;
+                                queue.push(fileChunk);
+                            }
+
+                            break;
+                        }
+                    }
+
+                    if (!foundNextTxid) {
+                        break;
+                    }
+
+                    iterationCount++;
+
+                    if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || !foundNextTxid) {
+                        await appendToSourceBuffer();
+                        bufferCount++;
+                    }
+                }
+
+                if (queue.length > 0) {
+                    await appendToSourceBuffer();
+                    bufferCount++;
+                }
+
+                updateConsoleOutput(`Iteration ${iterationCount - 1}: Processing completed.`);
+                updateConsoleOutput(`Iteration ${iterationCount}: Final processing completed. Audio is now playing.`);
+
+            } catch (error) {
+                updateConsoleOutput(`Error: ${error.message}`);
+            }
+        }
+
+        function initializeMediaSource() {
+            mediaSource = new MediaSource();
+            mediaSource.addEventListener('sourceopen', () => {
+                sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+                sourceBuffer.addEventListener('updateend', () => {
+                    if (queue.length > 0 && mediaSource.readyState === 'open') {
+                        appendToSourceBuffer();
+                    }
+                });
+            });
+        }
+
+        async function appendToSourceBuffer() {
+            if (!sourceBuffer || sourceBuffer.updating || mediaSource.readyState !== 'open' || queue.length === 0) return;
+
+            try {
+                const fileChunk = queue.shift();
+                const byteArray = new Uint8Array(fileChunk.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                sourceBuffer.appendBuffer(byteArray);
+            } catch (error) {
+                console.error('Error appending buffer:', error);
+            }
+        }
+
+        function createMediaElement() {
+            if (!audioElement) {
+                audioElement = document.createElement('audio');
+                audioElement.controls = true;
+                audioElement.src = URL.createObjectURL(mediaSource);
+                document.body.appendChild(audioElement);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize media source and media element on button click
+            document.querySelector('button').addEventListener('click', () => {
+                if (!audioElement) {
+                    createMediaElement();
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Download and Rebuild File from Blockchain</h1>
+    <label for="txid">Starting Transaction ID (txid):</label>
+    <input type="text" id="txid" placeholder="Enter txid here">
+    <button onclick="downloadAndRebuildFile()">Download and Rebuild File</button>
+    <textarea id="consoleOutput" readonly></textarea>
+</body>
+</html>
