@@ -29,7 +29,7 @@
         }
 
         async function fetchTransactionData(txid) {
-            const proxyUrl = `http://68.186.91.164:8111/getrawtransaction?txid=${txid}&decrypt=1`;
+            const proxyUrl = `http://50.37.202.173:8111/getrawtransaction?txid=${txid}&decrypt=1`;
 
             try {
                 const response = await fetch(proxyUrl, { method: 'GET' });
