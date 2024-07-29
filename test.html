@@ -188,7 +188,7 @@ async function downloadAndRebuildFile() {
 
     let currentTxid = startTxid;
     iterationCount = 0; // Actual iteration count for processing
-    displayIterationCount = 0; // Reset display count for logging
+    displayIterationCount = 0; // Display count for logging
     let startTime = Date.now();
 
     try {
@@ -228,7 +228,12 @@ async function downloadAndRebuildFile() {
                 // Update currentTxid with the last processed txid from the batch
                 currentTxid = lastProcessedTxid;
                 iterationCount++;
-                displayIterationCount += transactionData.length; // Increase display count by the number of transactions processed
+                displayIterationCount += transactionData.length; // Increment by actual number of transactions processed
+
+                // Handle the case where the last batch has fewer than 100 transactions
+                if (transactionData.length < 100) {
+                    break;
+                }
             } else {
                 if (!modeLogged) {
                     updateConsoleOutput('Using single transaction mode...');
@@ -286,6 +291,7 @@ async function downloadAndRebuildFile() {
         isJobRunning = false;
     }
 }
+
 
 
 
