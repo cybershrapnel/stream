@@ -194,48 +194,47 @@ async function downloadAndRebuildFile() {
 
     try {
         while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
-            if (batchMode) {
-                if (!modeLogged) {
-                    updateConsoleOutput('Using batch mode...');
-                    modeLogged = true;
-                }
+           if (batchMode) {
+    if (!modeLogged) {
+        updateConsoleOutput('Using batch mode...');
+        modeLogged = true;
+    }
 
-                let transactionData;
-                try {
-                    transactionData = await fetchBatchTransactionData(currentTxid);
-                } catch (error) {
-                    if (error.name === 'AbortError') {
-                        updateConsoleOutput('Job aborted.');
-                        return;
-                    }
-                    console.error('Error fetching batch transaction data, treating as end of file:', error);
-                    break;
-                }
+    let transactionData;
+    try {
+        transactionData = await fetchBatchTransactionData(currentTxid);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            updateConsoleOutput('Job aborted.');
+            return;
+        }
+        console.error('Error fetching batch transaction data, treating as end of file:', error);
+        break;
+    }
 
-                if (!transactionData || transactionData.length === 0) {
-                    break;
-                }
+    if (!transactionData || transactionData.length === 0) {
+        break;
+    }
 
-                for (let txData of transactionData) {
-                    await processTransactionData(txData);
-                }
+    for (let txData of transactionData) {
+        await processTransactionData(txData);
+    }
 
-                await appendToSourceBuffer();
-                bufferCount++;
+    await appendToSourceBuffer();
+    bufferCount++;
 
-                // Logging the current txid and batch size
-                updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
-                console.log(`Batch size: ${transactionData.length}`); // Debugging line to show batch size
+    updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
+    console.log(`Batch size: ${transactionData.length}`); // Debugging line to show batch size
 
-                currentTxid = lastProcessedTxid;
-                iterationCount++;
-                displayIterationCount += transactionData.length;
+    currentTxid = lastProcessedTxid;
+    displayIterationCount += transactionData.length;
 
-                if (transactionData.length < 100) {
-                    updateConsoleOutput(`Warning: Batch contains less than 100 transactions.`);
-                    break;
-                }
-            } else {
+    if (transactionData.length < 100) {
+        updateConsoleOutput(`Warning: Batch contains less than 100 transactions.`);
+        break;
+    }
+}
+else {
                 if (!modeLogged) {
                     updateConsoleOutput('Using single transaction mode...');
                     modeLogged = true;
