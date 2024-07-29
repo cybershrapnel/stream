@@ -230,6 +230,7 @@ async function downloadAndRebuildFile() {
 
                 updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
                 console.log(`Batch size: ${transactionData.length}`);
+                console.log('Batch contents:', transactionData); // Print all items in the batch
 
                 currentTxid = lastProcessedTxid;
                 displayIterationCount += transactionData.length;
@@ -288,6 +289,7 @@ async function downloadAndRebuildFile() {
         isJobRunning = false;
     }
 }
+
 
 async function processTransactionData(transactionData) {
     let foundNextTxid = false;
