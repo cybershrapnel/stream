@@ -348,11 +348,30 @@ async function appendToSourceBuffer() {
 }
 
 function createMediaElement() {
-    audioElement = document.createElement('audio');
-    audioElement.controls = true;
-    audioElement.src = URL.createObjectURL(mediaSource);
-    document.getElementById('mediaPlayerContainer').appendChild(audioElement);
+    // Ensure mediaPlayerContainer exists
+    const container = document.getElementById('mediaPlayerContainer');
+    if (!container) {
+        updateConsoleOutput('Error: mediaPlayerContainer not found.');
+        return;
+    }
+
+    // Create the audio element if it doesn't exist
+    if (!audioElement) {
+        audioElement = document.createElement('audio');
+        audioElement.controls = true;
+        audioElement.src = URL.createObjectURL(mediaSource);
+        container.appendChild(audioElement);
+    } else {
+        updateConsoleOutput('Audio element already exists.');
+    }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('button').addEventListener('click', () => {
+        createMediaElement();
+    });
+});
+
 
 function createDownloadButton() {
     const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
