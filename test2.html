@@ -393,7 +393,6 @@ function createMediaElement() {
     }
 }
 
-
 function createDownloadButton() {
     // Ensure the mediaPlayerContainer exists
     const container = document.getElementById('mediaPlayerContainer');
@@ -402,23 +401,25 @@ function createDownloadButton() {
         return;
     }
 
+    // Remove any existing download button
+    const existingButton = document.getElementById('downloadButton');
+    if (existingButton) {
+        existingButton.remove();
+    }
+
     // Check if there's any file data to create a download link
     if (fileData) {
         const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
         const blob = new Blob([byteArray], { type: 'audio/mpeg' });
         const url = URL.createObjectURL(blob);
 
-        let downloadButton = document.getElementById('downloadButton');
-        if (!downloadButton) {
-            downloadButton = document.createElement('a');
-            downloadButton.id = 'downloadButton';
-            downloadButton.textContent = 'Save mp3 file to computer';
-            container.appendChild(downloadButton);
-        }
-
+        const downloadButton = document.createElement('a');
+        downloadButton.id = 'downloadButton';
+        downloadButton.textContent = 'Save mp3 file to computer';
         downloadButton.href = url;
         downloadButton.download = `reconstructed_${bufferCount}.mp3`;
-        downloadButton.style.display = 'block'; // Make sure the button is visible
+
+        container.appendChild(downloadButton);
     }
 }
 
@@ -452,6 +453,7 @@ async function resetJob() {
 
     await new Promise(resolve => setTimeout(resolve, 100));
 }
+
 
 function loadHash(hash) {
     document.getElementById('txid').value = hash;
