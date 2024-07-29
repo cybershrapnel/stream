@@ -352,8 +352,12 @@ async function appendToSourceBuffer() {
 function createMediaElement() {
     // Ensure mediaPlayerContainer exists
     const container = document.getElementById('mediaPlayerContainer');
-    if (!container) {
-        updateConsoleOutput('Error: mediaPlayerContainer not found.');
+if (!container) {
+    updateConsoleOutput('Error: mediaPlayerContainer is null, cannot append audio element.');
+} else {
+    updateConsoleOutput('Appending audio element to mediaPlayerContainer.');
+}
+
         return;
     }
 
