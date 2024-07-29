@@ -191,7 +191,7 @@ async function downloadAndRebuildFile() {
 
     try {
         while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
-            let displayedIteration = batchMode ? iterationCount : iterationCount * 100;
+            let displayedIteration = batchMode ? iterationCount * 100 : iterationCount;
             const iterationMessage = `Iteration ${displayedIteration}: Processing txid: ${currentTxid}`;
             
             updateConsoleOutput(iterationMessage);
@@ -269,8 +269,8 @@ async function downloadAndRebuildFile() {
             bufferCount++;
         }
 
-        updateConsoleOutput(`Iteration ${iterationCount - 1}: Processing completed.`);
-        updateConsoleOutput(`Iteration ${iterationCount}: Final processing completed. Audio is now playing.`);
+        updateConsoleOutput(`Iteration ${iterationCount}: Processing completed.`);
+        updateConsoleOutput(`Iteration ${iterationCount + 1}: Final processing completed. Audio is now playing.`);
         createDownloadButton();
 
     } catch (error) {
