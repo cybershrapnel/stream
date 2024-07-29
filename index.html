@@ -195,6 +195,20 @@
 </style>
 
 <script>
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Check if the page is being viewed in a frame
+    if (window.self !== window.top) {
+        // This means the page is in a frame
+        document.body.style.backgroundColor = "rgba(0, 0, 0, 0.0)"; // more transparent
+    } else {
+        // This means the page is not in a frame
+        document.body.style.backgroundColor = "rgba(0, 0, 0, 0.95)"; // less transparent
+    }
+});
+
+
+    
 let mediaSource;
 let sourceBuffer;
 let queue = [];
