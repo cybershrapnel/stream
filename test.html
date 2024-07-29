@@ -217,6 +217,10 @@ async function downloadAndRebuildFile() {
                     await processTransactionData(txData);
                 }
 
+                // Update the media player buffer after processing each batch
+                await appendToSourceBuffer();
+                bufferCount++;
+
                 // Update currentTxid with the last processed txid from the batch
                 currentTxid = lastProcessedTxid;
             } else {
@@ -246,6 +250,7 @@ async function downloadAndRebuildFile() {
                 updateConsoleOutput('Switching to batch mode...');
             }
 
+            // Regularly update the buffer during single transaction mode
             if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
                 await appendToSourceBuffer();
                 bufferCount++;
