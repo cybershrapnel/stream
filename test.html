@@ -194,8 +194,8 @@ async function downloadAndRebuildFile() {
                 updateConsoleOutput(iterationMessage);
             }
 
-            let transactionData;
             if (batchMode) {
+                let transactionData;
                 try {
                     transactionData = await fetchBatchTransactionData(currentTxid);
                 } catch (error) {
@@ -208,9 +208,9 @@ async function downloadAndRebuildFile() {
                 }
                 for (let txData of transactionData) {
                     await processTransactionData(txData);
-                    currentTxid = lastProcessedTxid;
                 }
             } else {
+                let transactionData;
                 try {
                     transactionData = await fetchTransactionData(currentTxid);
                 } catch (error) {
@@ -222,15 +222,19 @@ async function downloadAndRebuildFile() {
                     break;
                 }
                 await processTransactionData(transactionData);
-                currentTxid = lastProcessedTxid;
             }
 
+            currentTxid = lastProcessedTxid;
             iterationCount++;
-            if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || Date.now() - lastSwitchTime > SWITCH_DELAY) {
-                if (iterationCount < SWITCH_THRESHOLD) {
-                    batchMode = true;
-                    lastSwitchTime = Date.now();
-                }
+
+            // Switch to batch mode if iteration count is too low
+            if (iterationCount < SWITCH_THRESHOLD && Date.now() - lastSwitchTime > SWITCH_DELAY) {
+                batchMode = true;
+                lastSwitchTime = Date.now();
+                updateConsoleOutput('Switching to batch mode...');
+            }
+
+            if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
                 await appendToSourceBuffer();
                 bufferCount++;
             }
@@ -371,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 
 
     </script>
