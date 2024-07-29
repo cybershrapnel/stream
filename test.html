@@ -185,6 +185,7 @@ async function downloadAndRebuildFile() {
 
     let currentTxid = startTxid;
     let iterationCount = 0;
+    let startTime = Date.now();
 
     try {
         while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
@@ -206,6 +207,11 @@ async function downloadAndRebuildFile() {
                     console.error('Error fetching batch transaction data, treating as end of file:', error);
                     break;
                 }
+
+                if (!transactionData || transactionData.length === 0) {
+                    break;
+                }
+
                 for (let txData of transactionData) {
                     await processTransactionData(txData);
                 }
@@ -227,10 +233,9 @@ async function downloadAndRebuildFile() {
             currentTxid = lastProcessedTxid;
             iterationCount++;
 
-            // Switch to batch mode if iteration count is too low
-            if (iterationCount < SWITCH_THRESHOLD && Date.now() - lastSwitchTime > SWITCH_DELAY) {
+            // Switch to batch mode if iteration count is too low and time has elapsed
+            if (iterationCount < SWITCH_THRESHOLD && (Date.now() - startTime) > SWITCH_DELAY) {
                 batchMode = true;
-                lastSwitchTime = Date.now();
                 updateConsoleOutput('Switching to batch mode...');
             }
 
@@ -375,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
 
 
     </script>
