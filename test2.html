@@ -352,12 +352,8 @@ async function appendToSourceBuffer() {
 function createMediaElement() {
     // Ensure mediaPlayerContainer exists
     const container = document.getElementById('mediaPlayerContainer');
-if (!container) {
-    updateConsoleOutput('Error: mediaPlayerContainer is null, cannot append audio element.');
-} else {
-    updateConsoleOutput('Appending audio element to mediaPlayerContainer.');
-}
-
+    if (!container) {
+        updateConsoleOutput('Error: mediaPlayerContainer not found. Cannot append audio element.');
         return;
     }
 
@@ -366,7 +362,14 @@ if (!container) {
         audioElement = document.createElement('audio');
         audioElement.controls = true;
         audioElement.src = URL.createObjectURL(mediaSource);
-        container.appendChild(audioElement);
+        
+        // Check if audioElement and mediaSource are correctly set
+        if (audioElement && mediaSource) {
+            updateConsoleOutput('Appending audio element to mediaPlayerContainer.');
+            container.appendChild(audioElement);
+        } else {
+            updateConsoleOutput('Error: Failed to create or configure audio element.');
+        }
     } else {
         updateConsoleOutput('Audio element already exists.');
     }
