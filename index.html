@@ -266,30 +266,22 @@ async function appendToSourceBuffer() {
             document.getElementById('mediaPlayerContainer').appendChild(audioElement);
         }
 
-function createDownloadButton() {
-    const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-    const blob = new Blob([byteArray], { type: 'audio/mpeg' });
-    const url = URL.createObjectURL(blob);
+        function createDownloadButton() {
+            const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const blob = new Blob([byteArray], { type: 'audio/mpeg' });
+            const url = URL.createObjectURL(blob);
 
-    // Ensure mediaPlayerContainer exists
-    const container = document.getElementById('mediaPlayerContainer');
-    if (!container) {
-        updateConsoleOutput('Error: mediaPlayerContainer not found.');
-        return;
-    }
+            let downloadButton = document.getElementById('downloadButton');
+            if (!downloadButton) {
+                downloadButton = document.createElement('a');
+                downloadButton.id = 'downloadButton';
+                downloadButton.textContent = 'Save mp3 file to computer';
+                document.getElementById('mediaPlayerContainer').appendChild(downloadButton);
+            }
 
-    // Create or update the download button
-    let downloadButton = document.getElementById('downloadButton');
-    if (!downloadButton) {
-        downloadButton = document.createElement('a');
-        downloadButton.id = 'downloadButton';
-        downloadButton.textContent = 'Save mp3 file to computer';
-        container.appendChild(downloadButton);
-    }
-
-    downloadButton.href = url;
-    downloadButton.download = `reconstructed_${bufferCount}.mp3`;
-}
+            downloadButton.href = url;
+            downloadButton.download = reconstructed_${bufferCount}.mp3;
+        }
 
 
         async function resetJob() {
