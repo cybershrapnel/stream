@@ -194,8 +194,8 @@ async function downloadAndRebuildFile() {
     initializeMediaSource();
 
     let currentTxid = startTxid;
-    iterationCount = 0;
-    displayIterationCount = 0;
+    iterationCount = 0; // Actual iteration count for processing
+    displayIterationCount = 0; // Display count for logging
     let startTime = Date.now();
 
     try {
@@ -229,12 +229,13 @@ async function downloadAndRebuildFile() {
                 await appendToSourceBuffer();
                 bufferCount++;
 
+                // Correct iteration count based on actual number of transactions received
+                displayIterationCount += transactionData.length;
                 updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
 
                 currentTxid = lastProcessedTxid;
-                iterationCount++;
-                displayIterationCount += transactionData.length;
 
+                // Break the loop if fewer than 100 transactions were processed
                 if (transactionData.length < 100) {
                     break;
                 }
@@ -292,6 +293,7 @@ async function downloadAndRebuildFile() {
         isJobRunning = false;
     }
 }
+
 
 
 async function processTransactionData(transactionData) {
