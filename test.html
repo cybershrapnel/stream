@@ -102,7 +102,7 @@ let isJobRunning = false;
 let abortController = null;
 let batchMode = false;
 let lastSwitchTime = Date.now();
-let processedTxids = new Set(); // To track processed txids
+let lastProcessedTxid = '';
 
 function updateConsoleOutput(message) {
     const consoleOutput = document.getElementById('consoleOutput');
@@ -208,6 +208,7 @@ async function downloadAndRebuildFile() {
                 }
                 for (let txData of transactionData) {
                     await processTransactionData(txData);
+                    currentTxid = lastProcessedTxid;
                 }
             } else {
                 try {
@@ -221,6 +222,7 @@ async function downloadAndRebuildFile() {
                     break;
                 }
                 await processTransactionData(transactionData);
+                currentTxid = lastProcessedTxid;
             }
 
             iterationCount++;
@@ -251,23 +253,26 @@ async function downloadAndRebuildFile() {
 }
 
 async function processTransactionData(transactionData) {
+    let foundNextTxid = false;
     for (const vout of transactionData.vout) {
         if (vout.scriptPubKey.asm.startsWith('OP_RETURN')) {
             const opReturnData = vout.scriptPubKey.asm.split(' ')[1];
 
             if (opReturnData.length >= 64) {
                 const nextTxid = opReturnData.substring(0, 64);
-                if (processedTxids.has(nextTxid)) {
-                    continue; // Skip already processed txid
+                if (nextTxid !== lastProcessedTxid) {
+                    lastProcessedTxid = nextTxid;
+                    foundNextTxid = true;
+                    const fileChunk = opReturnData.substring(64);
+                    fileData += fileChunk;
+                    queue.push(fileChunk);
                 }
-                processedTxids.add(nextTxid);
-                const fileChunk = opReturnData.substring(64);
-                fileData += fileChunk;
-                queue.push(fileChunk);
             }
-
             break;
         }
+    }
+    if (!foundNextTxid) {
+        lastProcessedTxid = "0000000000000000000000000000000000000000000000000000000000000000";
     }
 }
 
