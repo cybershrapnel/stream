@@ -168,9 +168,9 @@ async function downloadAndRebuildFile() {
     if (isJobRunning) {
         updateConsoleOutput('Stopping previous job and starting a new one...');
         abortController.abort();
-        await resetJob();
+        
     }
-
+await resetJob();
     abortController = new AbortController();
     isJobRunning = true;
 
