@@ -103,6 +103,7 @@ let abortController = null;
 let batchMode = false;
 let lastProcessedTxid = '';
 let iterationCount = 0;
+let displayIterationCount = 0; // For logging purposes
 let modeLogged = false;
 
 function updateConsoleOutput(message) {
@@ -186,7 +187,8 @@ async function downloadAndRebuildFile() {
     initializeMediaSource();
 
     let currentTxid = startTxid;
-    iterationCount = 0; // Reset here only at the start of a new job
+    iterationCount = 0; // Actual iteration count for processing
+    displayIterationCount = 0; // Reset display count for logging
     let startTime = Date.now();
 
     try {
@@ -221,11 +223,12 @@ async function downloadAndRebuildFile() {
                 bufferCount++;
 
                 // Log batch processing iteration
-                updateConsoleOutput(`Iteration ${iterationCount * 100}: Processing txid: ${currentTxid}`);
+                updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
 
                 // Update currentTxid with the last processed txid from the batch
                 currentTxid = lastProcessedTxid;
                 iterationCount++;
+                displayIterationCount += 100; // Increase display count by 100 per batch
             } else {
                 if (!modeLogged) {
                     updateConsoleOutput('Using single transaction mode...');
@@ -249,9 +252,10 @@ async function downloadAndRebuildFile() {
 
                 // Log single transaction processing iteration every 100 iterations
                 if (iterationCount % 100 === 0) {
-                    updateConsoleOutput(`Iteration ${iterationCount}: Processing txid: ${currentTxid}`);
+                    updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
                 }
                 iterationCount++;
+                displayIterationCount++;
 
                 // Regularly update the buffer during single transaction mode
                 if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
@@ -272,8 +276,8 @@ async function downloadAndRebuildFile() {
             bufferCount++;
         }
 
-        updateConsoleOutput(`Iteration ${iterationCount}: Processing completed.`);
-        updateConsoleOutput(`Iteration ${iterationCount + 1}: Final processing completed. Audio is now playing.`);
+        updateConsoleOutput(`Iteration ${displayIterationCount}: Processing completed.`);
+        updateConsoleOutput(`Iteration ${displayIterationCount + 1}: Final processing completed. Audio is now playing.`);
         createDownloadButton();
 
     } catch (error) {
@@ -352,7 +356,6 @@ function createDownloadButton() {
     const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
     const blob = new Blob([byteArray], { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
-
     let downloadButton = document.getElementById('downloadButton');
     if (downloadButton) {
         URL.revokeObjectURL(downloadButton.href);
