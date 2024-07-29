@@ -230,7 +230,10 @@ async function downloadAndRebuildFile() {
                 iterationCount++;
                 displayIterationCount += transactionData.length;
 
+                console.log(`Batch size: ${transactionData.length}`); // Debugging line to show batch size
+
                 if (transactionData.length < 100) {
+                    updateConsoleOutput(`Warning: Batch contains less than 100 transactions.`);
                     break;
                 }
             } else {
@@ -287,6 +290,7 @@ async function downloadAndRebuildFile() {
         isJobRunning = false;
     }
 }
+
 
 async function processTransactionData(transactionData) {
     let foundNextTxid = false;
