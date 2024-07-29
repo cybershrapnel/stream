@@ -101,7 +101,6 @@ const SWITCH_DELAY = 10000; // 10 seconds
 let isJobRunning = false;
 let abortController = null;
 let batchMode = false;
-let lastSwitchTime = Date.now();
 let lastProcessedTxid = '';
 
 function updateConsoleOutput(message) {
@@ -216,6 +215,9 @@ async function downloadAndRebuildFile() {
                 for (let txData of transactionData) {
                     await processTransactionData(txData);
                 }
+
+                // Update currentTxid with the last processed txid from the batch
+                currentTxid = lastProcessedTxid;
             } else {
                 updateConsoleOutput('Using single transaction mode...');
                 let transactionData;
@@ -230,13 +232,15 @@ async function downloadAndRebuildFile() {
                     break;
                 }
                 await processTransactionData(transactionData);
+
+                // Update currentTxid for the next iteration
+                currentTxid = lastProcessedTxid;
             }
 
-            currentTxid = lastProcessedTxid;
             iterationCount++;
 
-            // Switch to batch mode if iteration count is too low and time has elapsed
-            if (!batchMode && iterationCount < SWITCH_THRESHOLD && (Date.now() - startTime) > SWITCH_DELAY) {
+            // Check if it's time to switch to batch mode
+            if (!batchMode && iterationCount >= SWITCH_THRESHOLD && (Date.now() - startTime) > SWITCH_DELAY) {
                 batchMode = true;
                 updateConsoleOutput('Switching to batch mode...');
             }
