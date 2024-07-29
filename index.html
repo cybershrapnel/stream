@@ -131,10 +131,10 @@
     }
 
     audio::-webkit-media-controls-play-button,
-    audio::-webkit-media-controls-volume-slider,
-    audio::-webkit-media-controls-timeline {
-        //background-color: #444; /* Darker elements for controls */
-    }
+    audio::-webkit-media-controls-timeline,
+        audio::-webkit-media-controls-volume-slider {
+    filter: invert(1); /* Invert colors to make them white on dark background */
+}
         
     /* Styles for screens smaller than 800px */
     @media (max-width: 800px) {
