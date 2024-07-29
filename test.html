@@ -102,6 +102,7 @@ let isJobRunning = false;
 let abortController = null;
 let batchMode = false;
 let lastProcessedTxid = '';
+let iterationCount = 0;
 
 function updateConsoleOutput(message) {
     const consoleOutput = document.getElementById('consoleOutput');
@@ -183,7 +184,7 @@ async function downloadAndRebuildFile() {
     initializeMediaSource();
 
     let currentTxid = startTxid;
-    let iterationCount = 0;
+    iterationCount = 0; // Reset here only at the start of a new job
     let startTime = Date.now();
 
     try {
