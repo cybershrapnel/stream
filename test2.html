@@ -395,33 +395,44 @@ function createMediaElement() {
 
 
 function createDownloadButton() {
-    const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-    const blob = new Blob([byteArray], { type: 'audio/mpeg' });
-    const url = URL.createObjectURL(blob);
-
-    // Ensure mediaPlayerContainer exists
+    // Ensure the mediaPlayerContainer exists
     const container = document.getElementById('mediaPlayerContainer');
     if (!container) {
         updateConsoleOutput('Error: mediaPlayerContainer not found.');
         return;
     }
 
-    // Create or update the download button
-    let downloadButton = document.getElementById('downloadButton');
-    if (!downloadButton) {
-        downloadButton = document.createElement('a');
-        downloadButton.id = 'downloadButton';
-        downloadButton.textContent = 'Save mp3 file to computer';
-        container.appendChild(downloadButton);
-    }
+    // Check if there's any file data to create a download link
+    if (fileData) {
+        const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        const blob = new Blob([byteArray], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
 
-    downloadButton.href = url;
-    downloadButton.download = `reconstructed_${bufferCount}.mp3`;
+        let downloadButton = document.getElementById('downloadButton');
+        if (!downloadButton) {
+            downloadButton = document.createElement('a');
+            downloadButton.id = 'downloadButton';
+            downloadButton.textContent = 'Save mp3 file to computer';
+            container.appendChild(downloadButton);
+        }
+
+        downloadButton.href = url;
+        downloadButton.download = `reconstructed_${bufferCount}.mp3`;
+        downloadButton.style.display = 'block'; // Make sure the button is visible
+    }
 }
 
-
-
 async function resetJob() {
+    if (abortController) {
+        abortController.abort();
+    }
+
+    if (audioElement) {
+        audioElement.pause();
+        audioElement.remove();
+        audioElement = null;
+    }
+
     if (sourceBuffer && mediaSource.readyState === 'open') {
         mediaSource.removeSourceBuffer(sourceBuffer);
     }
@@ -432,6 +443,12 @@ async function resetJob() {
 
     mediaSource = null;
     sourceBuffer = null;
+
+    // Remove the existing download button, if any
+    const downloadButton = document.getElementById('downloadButton');
+    if (downloadButton) {
+        downloadButton.remove();
+    }
 
     await new Promise(resolve => setTimeout(resolve, 100));
 }
