@@ -281,7 +281,7 @@ async function downloadAndRebuildFile() {
 
         updateConsoleOutput(`Iteration ${displayIterationCount}: Processing completed.`);
         updateConsoleOutput(`Iteration ${displayIterationCount + 1}: Final processing completed. Audio is now playing.`);
-        //createDownloadButton();
+        createDownloadButton();
 
     } catch (error) {
         updateConsoleOutput(`Error: ${error.message}`);
@@ -394,24 +394,41 @@ function createMediaElement() {
 }
 
 
-
 function createDownloadButton() {
-    const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-    const blob = new Blob([byteArray], { type: 'audio/mpeg' });
-    const url = URL.createObjectURL(blob);
-    let downloadButton = document.getElementById('downloadButton');
-    if (downloadButton) {
-        URL.revokeObjectURL(downloadButton.href);
-        downloadButton.href = url;
-    } else {
-        downloadButton = document.createElement('a');
-        downloadButton.id = 'downloadButton';
+    try {
+        // Check if fileData is valid
+        if (!fileData || fileData.length === 0) {
+            updateConsoleOutput('Error: No file data available for download.');
+            return;
+        }
+
+        // Convert the file data into a byte array
+        const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        const blob = new Blob([byteArray], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+
+        // Check if the download button already exists
+        let downloadButton = document.getElementById('downloadButton');
+        if (!downloadButton) {
+            // Create a new download button if it doesn't exist
+            downloadButton = document.createElement('a');
+            downloadButton.id = 'downloadButton';
+            downloadButton.textContent = 'Download Rebuilt File';
+            document.getElementById('downloadContainer').appendChild(downloadButton);
+        }
+
+        // Update the download button's URL and filename
         downloadButton.href = url;
         downloadButton.download = 'downloaded.mp3';
-        downloadButton.textContent = 'Download Rebuilt File';
-        document.getElementById('downloadContainer').appendChild(downloadButton);
+
+        // Log success
+        updateConsoleOutput('Download link created successfully.');
+    } catch (error) {
+        updateConsoleOutput(`Error creating download link: ${error.message}`);
+        console.error('Error in createDownloadButton:', error);
     }
 }
+
 
 async function resetJob() {
     if (sourceBuffer && mediaSource.readyState === 'open') {
