@@ -191,11 +191,6 @@ async function downloadAndRebuildFile() {
 
     try {
         while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
-            let displayedIteration = batchMode ? iterationCount * 100 : iterationCount;
-            const iterationMessage = `Iteration ${displayedIteration}: Processing txid: ${currentTxid}`;
-            
-            updateConsoleOutput(iterationMessage);
-
             if (batchMode) {
                 if (!modeLogged) {
                     updateConsoleOutput('Using batch mode...');
@@ -225,8 +220,12 @@ async function downloadAndRebuildFile() {
                 await appendToSourceBuffer();
                 bufferCount++;
 
+                // Log batch processing iteration
+                updateConsoleOutput(`Iteration ${iterationCount * 100}: Processing txid: ${currentTxid}`);
+
                 // Update currentTxid with the last processed txid from the batch
                 currentTxid = lastProcessedTxid;
+                iterationCount++;
             } else {
                 if (!modeLogged) {
                     updateConsoleOutput('Using single transaction mode...');
@@ -247,20 +246,24 @@ async function downloadAndRebuildFile() {
 
                 // Update currentTxid for the next iteration
                 currentTxid = lastProcessedTxid;
-            }
 
-            iterationCount++;
+                // Log single transaction processing iteration every 100 iterations
+                if (iterationCount % 100 === 0) {
+                    updateConsoleOutput(`Iteration ${iterationCount}: Processing txid: ${currentTxid}`);
+                }
+                iterationCount++;
 
-            // Check if it's time to switch to batch mode
-            if (!batchMode && iterationCount >= SWITCH_THRESHOLD && (Date.now() - startTime) > SWITCH_DELAY) {
-                batchMode = true;
-                modeLogged = false; // Reset mode logging for new mode
-            }
+                // Regularly update the buffer during single transaction mode
+                if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
+                    await appendToSourceBuffer();
+                    bufferCount++;
+                }
 
-            // Regularly update the buffer during single transaction mode
-            if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
-                await appendToSourceBuffer();
-                bufferCount++;
+                // Check if it's time to switch to batch mode
+                if (!batchMode && iterationCount >= SWITCH_THRESHOLD && (Date.now() - startTime) > SWITCH_DELAY) {
+                    batchMode = true;
+                    modeLogged = false; // Reset mode logging for new mode
+                }
             }
         }
 
@@ -351,28 +354,20 @@ function createDownloadButton() {
     const url = URL.createObjectURL(blob);
 
     let downloadButton = document.getElementById('downloadButton');
-    if (!downloadButton) {
+    if (downloadButton) {
+        URL.revokeObjectURL(downloadButton.href);
+        downloadButton.href = url;
+    } else {
         downloadButton = document.createElement('a');
         downloadButton.id = 'downloadButton';
-        downloadButton.textContent = 'Save mp3 file to computer';
-        document.getElementById('mediaPlayerContainer').appendChild(downloadButton);
+        downloadButton.href = url;
+        downloadButton.download = 'downloaded.mp3';
+        downloadButton.textContent = 'Download Rebuilt File';
+        document.getElementById('downloadContainer').appendChild(downloadButton);
     }
-
-    downloadButton.href = url;
-    downloadButton.download = `reconstructed_${bufferCount}.mp3`;
 }
 
 async function resetJob() {
-    if (abortController) {
-        abortController.abort();
-    }
-
-    if (audioElement) {
-        audioElement.pause();
-        audioElement.remove();
-        audioElement = null;
-    }
-
     if (sourceBuffer && mediaSource.readyState === 'open') {
         mediaSource.removeSourceBuffer(sourceBuffer);
     }
