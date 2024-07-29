@@ -144,11 +144,15 @@ async function fetchBatchTransactionData(startTxid) {
         }
 
         const data = await response.json();
-        if (data.txids && data.txids.length < 100) {
-            // Handling fewer than 100 transactions case
-            updateConsoleOutput(`Warning: Less than 100 transactions returned.`);
+        if (data.txids) {
+            // Filter out null or empty txids
+            const filteredTxids = data.txids.filter(txid => txid && txid.trim() !== '');
+            if (filteredTxids.length < 100) {
+                updateConsoleOutput(`Warning: Less than 100 transactions returned.`);
+            }
+            return filteredTxids;
         }
-        return data.txids || []; // Ensure it's always an array
+        return [];
     } catch (error) {
         if (error.name === 'AbortError') {
             console.log('Fetch aborted');
@@ -218,8 +222,8 @@ async function downloadAndRebuildFile() {
                     break;
                 }
 
-                for (let txData of transactionData) {
-                    await processTransactionData(txData);
+                for (let txid of transactionData) {
+                    await processTransactionData({ txid });
                 }
 
                 await appendToSourceBuffer();
@@ -288,6 +292,7 @@ async function downloadAndRebuildFile() {
         isJobRunning = false;
     }
 }
+
 
 async function processTransactionData(transactionData) {
     let foundNextTxid = false;
