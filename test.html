@@ -96,8 +96,13 @@ let bufferCount = 0;
 let audioElement;
 const INITIAL_PLAYBACK_START = 300;
 const BUFFER_UPDATE_INTERVAL = 200;
+const SWITCH_THRESHOLD = 100; // Threshold to switch to batch processing
+const SWITCH_DELAY = 10000; // 10 seconds
 let isJobRunning = false;
 let abortController = null;
+let batchMode = false;
+let lastSwitchTime = Date.now();
+let processedTxids = new Set(); // To track processed txids
 
 function updateConsoleOutput(message) {
     const consoleOutput = document.getElementById('consoleOutput');
@@ -127,8 +132,8 @@ async function fetchTransactionData(txid) {
     }
 }
 
-async function fetchNext100Txids(txid) {
-    const proxyUrl = `https://rpc.nanocheeze.com:8111/getnext100txids?txid=${txid}`;
+async function fetchBatchTransactionData(startTxid) {
+    const proxyUrl = `https://rpc.nanocheeze.com:8111/getbatchtransactions?startTxid=${startTxid}`;
 
     try {
         const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
@@ -138,12 +143,12 @@ async function fetchNext100Txids(txid) {
         }
 
         const data = await response.json();
-        return data.txids;
+        return data.result; // Assuming result is an array of transaction data
     } catch (error) {
         if (error.name === 'AbortError') {
             console.log('Fetch aborted');
         } else {
-            console.error('Error fetching 100 txids:', error);
+            console.error('Error fetching batch transaction data:', error);
         }
         throw error;
     }
@@ -190,48 +195,40 @@ async function downloadAndRebuildFile() {
             }
 
             let transactionData;
-            try {
-                if (iterationCount < 100) {
-                    transactionData = await fetchTransactionData(currentTxid);
-                } else {
-                    const nextTxids = await fetchNext100Txids(currentTxid);
-                    nextTxids.forEach(txid => queue.push(txid));
-                    currentTxid = null;
-                    continue;
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    updateConsoleOutput('Job aborted.');
-                    return;
-                }
-                console.error('Error fetching transaction data, treating as end of file:', error);
-                break;
-            }
-
-            let foundNextTxid = false;
-            for (const vout of transactionData.vout) {
-                if (vout.scriptPubKey.asm.startsWith('OP_RETURN')) {
-                    const opReturnData = vout.scriptPubKey.asm.split(' ')[1];
-
-                    if (opReturnData.length >= 64) {
-                        currentTxid = opReturnData.substring(0, 64);
-                        foundNextTxid = true;
-                        const fileChunk = opReturnData.substring(64);
-                        fileData += fileChunk;
-                        queue.push(fileChunk);
+            if (batchMode) {
+                try {
+                    transactionData = await fetchBatchTransactionData(currentTxid);
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        updateConsoleOutput('Job aborted.');
+                        return;
                     }
-
+                    console.error('Error fetching batch transaction data, treating as end of file:', error);
                     break;
                 }
-            }
-
-            if (!foundNextTxid) {
-                break;
+                for (let txData of transactionData) {
+                    await processTransactionData(txData);
+                }
+            } else {
+                try {
+                    transactionData = await fetchTransactionData(currentTxid);
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        updateConsoleOutput('Job aborted.');
+                        return;
+                    }
+                    console.error('Error fetching transaction data, treating as end of file:', error);
+                    break;
+                }
+                await processTransactionData(transactionData);
             }
 
             iterationCount++;
-
-            if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || !foundNextTxid) {
+            if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || Date.now() - lastSwitchTime > SWITCH_DELAY) {
+                if (iterationCount < SWITCH_THRESHOLD) {
+                    batchMode = true;
+                    lastSwitchTime = Date.now();
+                }
                 await appendToSourceBuffer();
                 bufferCount++;
             }
@@ -250,6 +247,27 @@ async function downloadAndRebuildFile() {
         updateConsoleOutput(`Error: ${error.message}`);
     } finally {
         isJobRunning = false;
+    }
+}
+
+async function processTransactionData(transactionData) {
+    for (const vout of transactionData.vout) {
+        if (vout.scriptPubKey.asm.startsWith('OP_RETURN')) {
+            const opReturnData = vout.scriptPubKey.asm.split(' ')[1];
+
+            if (opReturnData.length >= 64) {
+                const nextTxid = opReturnData.substring(0, 64);
+                if (processedTxids.has(nextTxid)) {
+                    continue; // Skip already processed txid
+                }
+                processedTxids.add(nextTxid);
+                const fileChunk = opReturnData.substring(64);
+                fileData += fileChunk;
+                queue.push(fileChunk);
+            }
+
+            break;
+        }
     }
 }
 
@@ -348,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 
     </script>
 </head>
