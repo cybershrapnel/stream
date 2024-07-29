@@ -86,8 +86,7 @@
         }
     </style>
 
-
-    <script>
+<script>
 let mediaSource;
 let sourceBuffer;
 let queue = [];
@@ -145,7 +144,11 @@ async function fetchBatchTransactionData(startTxid) {
         }
 
         const data = await response.json();
-        return data.txids; // Assuming the txids are in the 'txids' property
+        if (data.txids && data.txids.length < 100) {
+            // Handling fewer than 100 transactions case
+            updateConsoleOutput(`Warning: Less than 100 transactions returned.`);
+        }
+        return data.txids || []; // Ensure it's always an array
     } catch (error) {
         if (error.name === 'AbortError') {
             console.log('Fetch aborted');
@@ -187,8 +190,8 @@ async function downloadAndRebuildFile() {
     initializeMediaSource();
 
     let currentTxid = startTxid;
-    iterationCount = 0; // Actual iteration count for processing
-    displayIterationCount = 0; // Display count for logging
+    iterationCount = 0;
+    displayIterationCount = 0;
     let startTime = Date.now();
 
     try {
@@ -198,6 +201,7 @@ async function downloadAndRebuildFile() {
                     updateConsoleOutput('Using batch mode...');
                     modeLogged = true;
                 }
+
                 let transactionData;
                 try {
                     transactionData = await fetchBatchTransactionData(currentTxid);
@@ -218,19 +222,15 @@ async function downloadAndRebuildFile() {
                     await processTransactionData(txData);
                 }
 
-                // Update the media player buffer after processing each batch
                 await appendToSourceBuffer();
                 bufferCount++;
 
-                // Log batch processing iteration
                 updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
 
-                // Update currentTxid with the last processed txid from the batch
                 currentTxid = lastProcessedTxid;
                 iterationCount++;
-                displayIterationCount += transactionData.length; // Increment by actual number of transactions processed
+                displayIterationCount += transactionData.length;
 
-                // Handle the case where the last batch has fewer than 100 transactions
                 if (transactionData.length < 100) {
                     break;
                 }
@@ -239,6 +239,7 @@ async function downloadAndRebuildFile() {
                     updateConsoleOutput('Using single transaction mode...');
                     modeLogged = true;
                 }
+
                 let transactionData;
                 try {
                     transactionData = await fetchTransactionData(currentTxid);
@@ -250,28 +251,24 @@ async function downloadAndRebuildFile() {
                     console.error('Error fetching transaction data, treating as end of file:', error);
                     break;
                 }
-                await processTransactionData(transactionData);
 
-                // Update currentTxid for the next iteration
+                await processTransactionData(transactionData);
                 currentTxid = lastProcessedTxid;
 
-                // Log single transaction processing iteration every 100 iterations
                 if (iterationCount % 100 === 0) {
                     updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
                 }
                 iterationCount++;
                 displayIterationCount++;
 
-                // Regularly update the buffer during single transaction mode
                 if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
                     await appendToSourceBuffer();
                     bufferCount++;
                 }
 
-                // Check if it's time to switch to batch mode
                 if (!batchMode && iterationCount >= SWITCH_THRESHOLD && (Date.now() - startTime) > SWITCH_DELAY) {
                     batchMode = true;
-                    modeLogged = false; // Reset mode logging for new mode
+                    modeLogged = false;
                 }
             }
         }
@@ -291,9 +288,6 @@ async function downloadAndRebuildFile() {
         isJobRunning = false;
     }
 }
-
-
-
 
 async function processTransactionData(transactionData) {
     let foundNextTxid = false;
@@ -405,9 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+</script>
 
-
-    </script>
 </head>
 <body>
     <h1>Stream MP3 from Blockchain</h1>
