@@ -229,14 +229,15 @@ async function downloadAndRebuildFile() {
                 await appendToSourceBuffer();
                 bufferCount++;
 
-                // Correct iteration count based on actual number of transactions received
+                // Update the display iteration count correctly
                 displayIterationCount += transactionData.length;
                 updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
 
                 currentTxid = lastProcessedTxid;
 
-                // Break the loop if fewer than 100 transactions were processed
+                // If fewer than 100 transactions, consider end of processing
                 if (transactionData.length < 100) {
+                    updateConsoleOutput(`Fewer than 100 transactions returned. Ending batch processing.`);
                     break;
                 }
             } else {
