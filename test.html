@@ -1,0 +1,131 @@
+let mediaSource;
+let sourceBuffer;
+let queue = [];
+let fileData = '';
+let bufferCount = 0;
+let audioElement;
+const INITIAL_PLAYBACK_START = 300;
+const BUFFER_UPDATE_INTERVAL = 200;
+let isJobRunning = false;
+let abortController = null;
+
+function updateConsoleOutput(message) {
+    const consoleOutput = document.getElementById('consoleOutput');
+    consoleOutput.value += message + '\n';
+    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+async function fetchTransactionData(txid) {
+    const proxyUrl = `https://rpc.nanocheeze.com:8111/getrawtransaction?txid=${txid}&decrypt=1`;
+
+    try {
+        const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.result;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.log('Fetch aborted');
+        } else {
+            console.error('Error fetching transaction data:', error);
+        }
+        throw error;
+    }
+}
+
+async function fetchNext100Txids(txid) {
+    const proxyUrl = `https://rpc.nanocheeze.com:8111/getnext100txids?txid=${txid}`;
+
+    try {
+        const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.txids;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.log('Fetch aborted');
+        } else {
+            console.error('Error fetching 100 txids:', error);
+        }
+        throw error;
+    }
+}
+
+async function downloadAndRebuildFile() {
+    if (isJobRunning) {
+        updateConsoleOutput('Stopping previous job and starting a new one...');
+        abortController.abort();
+        await resetJob();
+    }
+
+    abortController = new AbortController();
+    isJobRunning = true;
+
+    const startTxid = document.getElementById('txid').value.trim();
+    if (!startTxid) {
+        updateConsoleOutput('No txid provided.');
+        isJobRunning = false;
+        return;
+    }
+
+    fileData = '';
+    queue = [];
+    bufferCount = 0;
+
+    if (audioElement) {
+        audioElement.pause();
+        audioElement.remove();
+        audioElement = null;
+    }
+
+    initializeMediaSource();
+
+    let currentTxid = startTxid;
+    let iterationCount = 0;
+
+    try {
+        while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
+            const iterationMessage = `Iteration ${iterationCount}: Processing txid: ${currentTxid}`;
+
+            if (iterationCount % 100 === 0) {
+                updateConsoleOutput(iterationMessage);
+            }
+
+            let transactionData;
+            try {
+                if (iterationCount < 100) {
+                    transactionData = await fetchTransactionData(currentTxid);
+                } else {
+                    const nextTxids = await fetchNext100Txids(currentTxid);
+                    nextTxids.forEach(txid => queue.push(txid));
+                    currentTxid = null;
+                    continue;
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    updateConsoleOutput('Job aborted.');
+                    return;
+                }
+                console.error('Error fetching transaction data, treating as end of file:', error);
+                break;
+            }
+
+            let foundNextTxid = false;
+            for (const vout of transactionData.vout) {
+                if (vout.scriptPubKey.asm.startsWith('OP_RETURN')) {
+                    const opReturnData = vout.scriptPubKey.asm.split(' ')[1];
+
+                    if (opReturnData.length >= 64) {
+                        currentTxid = opReturnData.substring(0, 64);
+                        foundNextTxid = true;
+                        const fileChunk = opReturnData.substring(64);
+                        fileData += fileChunk;
+                        queue.push
