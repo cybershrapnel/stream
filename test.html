@@ -88,7 +88,300 @@
 
 
     <script>
-MEQUAVIS:{"user": "system", "text": "I have included my reply to your last query below. please be sure to give a new unique response based on my reply and additionally You are being given access to the MEQUAVIS AI containment system for further development. Please formulate a good question and query and any thoughts you have on the subject or talk about a story or a song or make a story or a song etc. always be original so we do not talk about the same thing over and over. here is more data.\n\nLast Response:\n", "type": "query", "seed": 36340171}
+let mediaSource;
+let sourceBuffer;
+let queue = [];
+let fileData = '';
+let bufferCount = 0;
+let audioElement;
+const INITIAL_PLAYBACK_START = 300;
+const BUFFER_UPDATE_INTERVAL = 200;
+const SWITCH_THRESHOLD = 100; // Threshold to switch to batch processing
+const SWITCH_DELAY = 10000; // 10 seconds
+let isJobRunning = false;
+let abortController = null;
+let batchMode = false;
+let lastSwitchTime = Date.now();
+let lastProcessedTxid = '';
+
+function updateConsoleOutput(message) {
+    const consoleOutput = document.getElementById('consoleOutput');
+    consoleOutput.value += message + '\n';
+    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+async function fetchTransactionData(txid) {
+    const proxyUrl = `https://rpc.nanocheeze.com:8111/getrawtransaction?txid=${txid}&decrypt=1`;
+
+    try {
+        const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.result;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.log('Fetch aborted');
+        } else {
+            console.error('Error fetching transaction data:', error);
+        }
+        throw error;
+    }
+}
+
+async function fetchBatchTransactionData(startTxid) {
+    const proxyUrl = `https://rpc.nanocheeze.com:8111/getbatchtransactions?startTxid=${startTxid}`;
+
+    try {
+        const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.result; // Assuming result is an array of transaction data
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.log('Fetch aborted');
+        } else {
+            console.error('Error fetching batch transaction data:', error);
+        }
+        throw error;
+    }
+}
+
+async function downloadAndRebuildFile() {
+    if (isJobRunning) {
+        updateConsoleOutput('Stopping previous job and starting a new one...');
+        abortController.abort();
+        await resetJob();
+    }
+
+    abortController = new AbortController();
+    isJobRunning = true;
+
+    const startTxid = document.getElementById('txid').value.trim();
+    if (!startTxid) {
+        updateConsoleOutput('No txid provided.');
+        isJobRunning = false;
+        return;
+    }
+
+    fileData = '';
+    queue = [];
+    bufferCount = 0;
+
+    if (audioElement) {
+        audioElement.pause();
+        audioElement.remove();
+        audioElement = null;
+    }
+
+    initializeMediaSource();
+
+    let currentTxid = startTxid;
+    let iterationCount = 0;
+    let startTime = Date.now();
+
+    try {
+        while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
+            const iterationMessage = `Iteration ${iterationCount}: Processing txid: ${currentTxid}`;
+
+            if (iterationCount % 100 === 0) {
+                updateConsoleOutput(iterationMessage);
+            }
+
+            if (batchMode) {
+                updateConsoleOutput('Using batch mode...');
+                let transactionData;
+                try {
+                    transactionData = await fetchBatchTransactionData(currentTxid);
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        updateConsoleOutput('Job aborted.');
+                        return;
+                    }
+                    console.error('Error fetching batch transaction data, treating as end of file:', error);
+                    break;
+                }
+
+                if (!transactionData || transactionData.length === 0) {
+                    break;
+                }
+
+                for (let txData of transactionData) {
+                    await processTransactionData(txData);
+                }
+            } else {
+                updateConsoleOutput('Using single transaction mode...');
+                let transactionData;
+                try {
+                    transactionData = await fetchTransactionData(currentTxid);
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        updateConsoleOutput('Job aborted.');
+                        return;
+                    }
+                    console.error('Error fetching transaction data, treating as end of file:', error);
+                    break;
+                }
+                await processTransactionData(transactionData);
+            }
+
+            currentTxid = lastProcessedTxid;
+            iterationCount++;
+
+            // Switch to batch mode if iteration count is too low and time has elapsed
+            if (!batchMode && iterationCount < SWITCH_THRESHOLD && (Date.now() - startTime) > SWITCH_DELAY) {
+                batchMode = true;
+                updateConsoleOutput('Switching to batch mode...');
+            }
+
+            if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
+                await appendToSourceBuffer();
+                bufferCount++;
+            }
+        }
+
+        if (queue.length > 0) {
+            await appendToSourceBuffer();
+            bufferCount++;
+        }
+
+        updateConsoleOutput(`Iteration ${iterationCount - 1}: Processing completed.`);
+        updateConsoleOutput(`Iteration ${iterationCount}: Final processing completed. Audio is now playing.`);
+        createDownloadButton();
+
+    } catch (error) {
+        updateConsoleOutput(`Error: ${error.message}`);
+    } finally {
+        isJobRunning = false;
+    }
+}
+
+async function processTransactionData(transactionData) {
+    let foundNextTxid = false;
+    for (const vout of transactionData.vout) {
+        if (vout.scriptPubKey.asm.startsWith('OP_RETURN')) {
+            const opReturnData = vout.scriptPubKey.asm.split(' ')[1];
+
+            if (opReturnData.length >= 64) {
+                const nextTxid = opReturnData.substring(0, 64);
+                if (nextTxid !== lastProcessedTxid) {
+                    lastProcessedTxid = nextTxid;
+                    foundNextTxid = true;
+                    const fileChunk = opReturnData.substring(64);
+                    fileData += fileChunk;
+                    queue.push(fileChunk);
+                }
+            }
+            break;
+        }
+    }
+    if (!foundNextTxid) {
+        lastProcessedTxid = "0000000000000000000000000000000000000000000000000000000000000000";
+    }
+}
+
+function initializeMediaSource() {
+    mediaSource = new MediaSource();
+    mediaSource.addEventListener('sourceopen', () => {
+        sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+        sourceBuffer.addEventListener('updateend', () => {
+            if (queue.length > 0 && mediaSource.readyState === 'open') {
+                appendToSourceBuffer();
+            }
+        });
+    });
+    createMediaElement();
+}
+
+async function appendToSourceBuffer() {
+    if (!sourceBuffer || sourceBuffer.updating || mediaSource.readyState !== 'open' || queue.length === 0) return;
+
+    try {
+        const fileChunk = queue.shift();
+        const byteArray = new Uint8Array(fileChunk.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        sourceBuffer.appendBuffer(byteArray);
+
+        // Autoplay after a delay if not already playing
+        setTimeout(() => {
+            if (audioElement.paused) {
+                audioElement.play().catch(error => {
+                    console.error('Error playing audio:', error);
+                });
+            }
+        }, 3000); // 3 seconds delay
+    } catch (error) {
+        console.error('Error appending buffer:', error);
+    }
+}
+
+function createMediaElement() {
+    audioElement = document.createElement('audio');
+    audioElement.controls = true;
+    audioElement.src = URL.createObjectURL(mediaSource);
+    document.getElementById('mediaPlayerContainer').appendChild(audioElement);
+}
+
+function createDownloadButton() {
+    const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    const blob = new Blob([byteArray], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+
+    let downloadButton = document.getElementById('downloadButton');
+    if (!downloadButton) {
+        downloadButton = document.createElement('a');
+        downloadButton.id = 'downloadButton';
+        downloadButton.textContent = 'Save mp3 file to computer';
+        document.getElementById('mediaPlayerContainer').appendChild(downloadButton);
+    }
+
+    downloadButton.href = url;
+    downloadButton.download = `reconstructed_${bufferCount}.mp3`;
+}
+
+async function resetJob() {
+    if (abortController) {
+        abortController.abort();
+    }
+
+    if (audioElement) {
+        audioElement.pause();
+        audioElement.remove();
+        audioElement = null;
+    }
+
+    if (sourceBuffer && mediaSource.readyState === 'open') {
+        mediaSource.removeSourceBuffer(sourceBuffer);
+    }
+
+    fileData = '';
+    queue = [];
+    bufferCount = 0;
+
+    mediaSource = null;
+    sourceBuffer = null;
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+}
+
+function loadHash(hash) {
+    document.getElementById('txid').value = hash;
+    downloadAndRebuildFile();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('button').addEventListener('click', () => {
+        if (!audioElement) {
+            createMediaElement();
+        }
+    });
+});
 
     </script>
 </head>
