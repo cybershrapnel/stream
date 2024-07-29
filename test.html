@@ -157,6 +157,7 @@ async function fetchBatchTransactionData(startTxid) {
         throw error;
     }
 }
+
 async function downloadAndRebuildFile() {
     if (isJobRunning) {
         updateConsoleOutput('Stopping previous job and starting a new one...');
@@ -238,11 +239,7 @@ async function downloadAndRebuildFile() {
                     break;
                 }
             } else {
-                if (!modeLogged) {
-                    updateConsoleOutput('Using single transaction mode...');
-                    modeLogged = true;
-                }
-
+                // Single transaction mode processing...
                 let transactionData;
                 try {
                     transactionData = await fetchTransactionData(currentTxid);
@@ -315,7 +312,6 @@ async function processTransactionData(transactionData) {
         lastProcessedTxid = "0000000000000000000000000000000000000000000000000000000000000000";
     }
 }
-
 
 function initializeMediaSource() {
     mediaSource = new MediaSource();
@@ -403,6 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 </script>
 
 
