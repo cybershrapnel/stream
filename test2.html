@@ -350,36 +350,43 @@ async function appendToSourceBuffer() {
 }
 
 function createMediaElement() {
-    // Ensure mediaPlayerContainer exists
+    // Attempt to find the mediaPlayerContainer
     const container = document.getElementById('mediaPlayerContainer');
+
+    // Log if mediaPlayerContainer is not found
     if (!container) {
         updateConsoleOutput('Error: mediaPlayerContainer not found. Cannot append audio element.');
+        console.error('Error: mediaPlayerContainer not found.');
         return;
     }
 
-    // Create the audio element if it doesn't exist
+    // Check if audioElement is already created
     if (!audioElement) {
-        audioElement = document.createElement('audio');
-        audioElement.controls = true;
-        audioElement.src = URL.createObjectURL(mediaSource);
-        
-        // Check if audioElement and mediaSource are correctly set
-        if (audioElement && mediaSource) {
-            updateConsoleOutput('Appending audio element to mediaPlayerContainer.');
-            container.appendChild(audioElement);
-        } else {
-            updateConsoleOutput('Error: Failed to create or configure audio element.');
+        try {
+            // Create and configure the audio element
+            audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.src = URL.createObjectURL(mediaSource);
+
+            // Ensure audioElement and mediaSource are valid before appending
+            if (audioElement && mediaSource) {
+                container.appendChild(audioElement);
+                updateConsoleOutput('Audio element appended successfully.');
+                console.log('Audio element created and appended successfully.');
+            } else {
+                updateConsoleOutput('Error: audioElement or mediaSource is null.');
+                console.error('Error: audioElement or mediaSource is null.');
+            }
+        } catch (error) {
+            updateConsoleOutput(`Error: Failed to create or append audio element - ${error.message}`);
+            console.error(`Error: Failed to create or append audio element - ${error.message}`);
         }
     } else {
         updateConsoleOutput('Audio element already exists.');
+        console.log('Audio element already exists.');
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelector('button').addEventListener('click', () => {
-        createMediaElement();
-    });
-});
 
 
 function createDownloadButton() {
