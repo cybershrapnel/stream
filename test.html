@@ -157,7 +157,6 @@ async function fetchBatchTransactionData(startTxid) {
         throw error;
     }
 }
-
 async function downloadAndRebuildFile() {
     if (isJobRunning) {
         updateConsoleOutput('Stopping previous job and starting a new one...');
@@ -224,13 +223,13 @@ async function downloadAndRebuildFile() {
                 await appendToSourceBuffer();
                 bufferCount++;
 
+                // Logging the current txid and batch size
                 updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
+                console.log(`Batch size: ${transactionData.length}`); // Debugging line to show batch size
 
                 currentTxid = lastProcessedTxid;
                 iterationCount++;
                 displayIterationCount += transactionData.length;
-
-                console.log(`Batch size: ${transactionData.length}`); // Debugging line to show batch size
 
                 if (transactionData.length < 100) {
                     updateConsoleOutput(`Warning: Batch contains less than 100 transactions.`);
@@ -291,7 +290,6 @@ async function downloadAndRebuildFile() {
     }
 }
 
-
 async function processTransactionData(transactionData) {
     let foundNextTxid = false;
     for (const vout of transactionData.vout) {
@@ -315,6 +313,7 @@ async function processTransactionData(transactionData) {
         lastProcessedTxid = "0000000000000000000000000000000000000000000000000000000000000000";
     }
 }
+
 
 function initializeMediaSource() {
     mediaSource = new MediaSource();
