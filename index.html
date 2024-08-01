@@ -232,7 +232,7 @@ let startTime = Date.now();
   
 const SWITCH_THRESHOLD = 150; // Number of iterations before checking speed
 const MIN_SPEED_THRESHOLD = 100; // Minimum iterations per second to avoid switching to batch mode
-
+const MIN_SPEED_THRESHOLD_LTC = 500; // Minimum iterations per second to avoid switching to batch mode
 function updateConsoleOutput(message) {
     const consoleOutput = document.getElementById('consoleOutput');
     consoleOutput.value += message + '\n';
@@ -353,7 +353,11 @@ await resetJob();
                 const elapsedTime = (Date.now() - startTime) / 1000; // in seconds
                 const averageSpeed = iterationCount / elapsedTime;
 
-                if (averageSpeed < MIN_SPEED_THRESHOLD) {
+    // Determine which threshold to use based on the selected cryptocurrency
+    const cryptoType = document.getElementById('cryptoSelect').value;
+    const currentThreshold = cryptoType === 'litecoin' ? MIN_SPEED_THRESHOLD_LTC : MIN_SPEED_THRESHOLD;
+
+    if (averageSpeed < currentThreshold) {
                     batchMode = true;
                     modeLogged = false;
                     updateConsoleOutput(`Switching to batch mode. Average speed: ${averageSpeed.toFixed(2)} iterations/second`);
