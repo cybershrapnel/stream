@@ -247,8 +247,12 @@ function updateConsoleOutput(message) {
 async function fetchTransactionData(txid) {
 
         let cryptoType = document.getElementById('cryptoSelect').value;
-    let prefix = cryptoType === 'Litecoin' ? 'l' : '';
+            console.log(cryptoType);
+    let prefix = cryptoType === 'litecoin' ? 'l' : '';
+                console.log(prefix);
+
     const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getrawtransaction?txid=${txid}&decrypt=1`;
+                console.log(proxyUrl);
 
     try {
         const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
