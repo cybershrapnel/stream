@@ -500,6 +500,9 @@ async function appendToSourceBuffer() {
         const byteArray = new Uint8Array(fileChunk.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
         sourceBuffer.appendBuffer(byteArray);
 
+        let delay = document.getElementById('cryptoSelect').value === 'nanocheeze' ? 2000 : 9000;  // 3000 ms for NanoCheeze, 9000 ms for Litecoin
+
+        
         // Autoplay after a delay if not already playing, only once per song
         if (!hasStartedPlaying) {
             setTimeout(() => {
@@ -508,7 +511,7 @@ async function appendToSourceBuffer() {
                         console.error('Error playing audio:', error);
                     });
                 }
-            }, 3000); // 800 miliseconds delay
+            }, delay); // 800 miliseconds delay
             hasStartedPlaying = true; // Mark as played
         }
     } catch (error) {
