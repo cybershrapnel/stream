@@ -238,41 +238,41 @@ function updateConsoleOutput(message) {
     consoleOutput.value += message + '\n';
     consoleOutput.scrollTop = consoleOutput.scrollHeight;
 }
+async function fetchTransactionData(txid) {
+    let cryptoType = document.getElementById('cryptoSelect').value;
+    let prefix = cryptoType === 'litecoin' ? 'l' : '';
+    const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getrawtransaction?txid=${txid}&decrypt=1`;
 
-    async function fetchTransactionData(txid) {
-        let cryptoType = document.getElementById('cryptoSelect').value;
-        let prefix = cryptoType === 'litecoin' ? 'l' : '';
-        const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getrawtransaction?txid=${txid}&decrypt=1`;
-
-        try {
-            const response = await fetch(proxyUrl, { method: 'GET' });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching transaction data:', error);
-            throw error;
+    try {
+        const response = await fetch(proxyUrl, { method: 'GET' });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching transaction data:', error);
+        throw error;
     }
+}
 
-    async function fetchBatchTransactionData(startTxid) {
-        let cryptoType = document.getElementById('cryptoSelect').value;
-        let prefix = cryptoType === 'litecoin' ? 'l' : '';
-        const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getnext100txids?txid=${startTxid}`;
+async function fetchBatchTransactionData(startTxid) {
+    let cryptoType = document.getElementById('cryptoSelect').value;
+    let prefix = cryptoType === 'litecoin' ? 'l' : '';
+    const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getnext100txids?txid=${startTxid}`;
 
-        try {
-            const response = await fetch(proxyUrl, { method: 'GET' });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            return data.txids || []; // Ensure it's always an array
-        } catch (error) {
-            console.error('Error fetching batch transaction data:', error);
-            throw error;
+    try {
+        const response = await fetch(proxyUrl, { method: 'GET' });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const data = await response.json();
+        return data.txids || []; // Ensure it's always an array
+    } catch (error) {
+        console.error('Error fetching batch transaction data:', error);
+        throw error;
     }
+}
+
 
 async function downloadAndRebuildFile() {
     if (isJobRunning) {
