@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming Music from Blockchain</title>
+    <style>
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1, label, textarea, input, button, a {
+            color: #ffffff;
+        }
+
+        textarea, input, button {
+            background-color: #333333;
+            border: 1px solid #555555;
+            color: #ffffff;
+        }
+
+        textarea {
+            resize: none;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 10px 20px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #444444;
+        }
+
+        a {
+            color: #00ff00;
+            text-decoration: none;
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .media-player-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            flex-direction: column;
+        }
+
+        ul.hash-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px 0 0;
+        }
+
+        ul.hash-list li {
+            cursor: pointer;
+            color: #00ff00;
+            margin-bottom: 5px;
+        }
+
+        ul.hash-list li:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <style>
+    /* Default styles for larger screens */
+    body {
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    h1, label, textarea, input, button, a {
+        font-size: 1em;
+    }
+
+    textarea {
+        width: 100%;
+        height: 200px;
+    }
+
+    .media-player-container, .hash-list, .media-player-container a, button {
+        font-size: 1em;
+    }
+
+
+    .media-player-container {
+        width: 100%; /* Ensures media player uses full width of the container */
+        //background-color: #333; /* Dark theme background */
+        color: #fff; /* Light color for text */
+        padding: 10px; /* Adds padding around the media player for better spacing */
+        border-radius: 5px; /* Optional: adds rounded corners */
+    }
+
+    .media-player-container img {
+        max-width: 100%; /* Ensures images within the media player scale down */
+        height: auto; /* Maintains aspect ratio */
+    }
+
+    audio {
+        width: 100%; /* Audio controls stretch to container width */
+        //background-color: #222; /* Dark theme for audio controls */
+        color: #fff; /* Ensures control icons are visible */
+    }
+
+    audio::-webkit-media-controls-panel {
+        background-color: #222; /* Dark background for controls */
+        color: #fff; /* Light color for icons and text */
+    }
+
+    audio::-webkit-media-controls-play-button,
+    audio::-webkit-media-controls-timeline,
+        audio::-webkit-media-controls-volume-slider {
+    filter: invert(1); /* Invert colors to make them white on dark background */
+}
+        
+    /* Styles for screens smaller than 800px */
+    @media (max-width: 800px) {
+        body {
+            font-size: 12px; /* Smaller font size */
+            line-height: 1.2;
+        }
+
+        h1 {
+            font-size: 1.5em;
+        }
+
+        label, textarea, input, button, a {
+            font-size: 0.8em; /* Make fonts smaller */
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px; /* Reduce height */
+        }
+
+
+
+
+
+
+        
+        .media-player-container, .hash-list, .media-player-container a, button {
+            font-size: 0.8em; /* Adjust font size */
+        }
+
+        .media-player-container img {
+            max-width: 80%; /* Reduce image size */
+        }
+
+        /* Adjust the margins and padding for smaller screens */
+        body {
+            padding: 10px;
+        }
+
+        .media-player-container, .hash-list {
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 5px 10px; /* Smaller button padding */
+        }
+
+        /* Additional adjustments for smaller screens */
+        input, textarea, button {
+            border-width: 1px; /* Thinner borders */
+        }
+
+        .hash-list li {
+            margin-bottom: 3px; /* Less spacing between list items */
+        }
+    }
+</style>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Check if the page is being viewed in a frame
+    if (window.self !== window.top) {
+        // This means the page is in a frame
+        document.body.style.backgroundColor = "rgba(0, 0, 0, 0.0)"; // more transparent
+    } else {
+        // This means the page is not in a frame
+        document.body.style.backgroundColor = "rgba(0, 0, 0, 0.95)"; // less transparent
+    }
+});
+
+
+    
+let mediaSource;
+let sourceBuffer;
+let queue = [];
+let fileData = '';
+let bufferCount = 0;
+let audioElement;
+const INITIAL_PLAYBACK_START = 300;
+const BUFFER_UPDATE_INTERVAL = 200;
+const SWITCH_DELAY = 10000; // 10 seconds
+let isJobRunning = false;
+let abortController = null;
+let batchMode = false;
+let lastProcessedTxid = '';
+let iterationCount = 0;
+let displayIterationCount = 0; // For logging purposes
+let modeLogged = false;
+let hasStartedPlaying = false; // Flag to track if playback has started
+
+
+let startTime = Date.now();
+  
+const SWITCH_THRESHOLD = 150; // Number of iterations before checking speed
+const MIN_SPEED_THRESHOLD = 100; // Minimum iterations per second to avoid switching to batch mode
+
+function updateConsoleOutput(message) {
+    const consoleOutput = document.getElementById('consoleOutput');
+    consoleOutput.value += message + '\n';
+    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+    async function fetchTransactionData(txid) {
+        let cryptoType = document.getElementById('cryptoSelect').value;
+        let prefix = cryptoType === 'litecoin' ? 'l' : '';
+        const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getrawtransaction?txid=${txid}&decrypt=1`;
+
+        try {
+            const response = await fetch(proxyUrl, { method: 'GET' });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching transaction data:', error);
+            throw error;
+        }
+    }
+
+    async function fetchBatchTransactionData(startTxid) {
+        let cryptoType = document.getElementById('cryptoSelect').value;
+        let prefix = cryptoType === 'litecoin' ? 'l' : '';
+        const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getnext100txids?txid=${startTxid}`;
+
+        try {
+            const response = await fetch(proxyUrl, { method: 'GET' });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.txids || []; // Ensure it's always an array
+        } catch (error) {
+            console.error('Error fetching batch transaction data:', error);
+            throw error;
+        }
+    }
+
+async function downloadAndRebuildFile() {
+    if (isJobRunning) {
+        updateConsoleOutput('Stopping previous job and starting a new one...');
+        abortController.abort();
+        
+    }
+await resetJob();
+    abortController = new AbortController();
+    isJobRunning = true;
+
+    const startTxid = document.getElementById('txid').value.trim();
+    if (!startTxid) {
+        updateConsoleOutput('No txid provided.');
+        isJobRunning = false;
+        return;
+    }
+
+    fileData = '';
+    queue = [];
+    bufferCount = 0;
+    modeLogged = false;
+
+    if (audioElement) {
+        audioElement.pause();
+        audioElement.remove();
+        audioElement = null;
+    }
+
+    initializeMediaSource();
+
+    let currentTxid = startTxid;
+    iterationCount = 0;
+    displayIterationCount = 0;
+    startTime = Date.now();
+
+    try {
+        while (currentTxid && currentTxid !== "0000000000000000000000000000000000000000000000000000000000000000") {
+            if (!batchMode && iterationCount >= SWITCH_THRESHOLD) {
+                // Calculate average speed in iterations per second
+                const elapsedTime = (Date.now() - startTime) / 1000; // in seconds
+                const averageSpeed = iterationCount / elapsedTime;
+
+                if (averageSpeed < MIN_SPEED_THRESHOLD) {
+                    batchMode = true;
+                    modeLogged = false;
+                    updateConsoleOutput(`Switching to batch mode. Average speed: ${averageSpeed.toFixed(2)} iterations/second`);
+                }
+            }
+
+            if (batchMode) {
+                if (!modeLogged) {
+                    updateConsoleOutput('Using batch mode...');
+                    modeLogged = true;
+                }
+
+                let transactionData;
+                try {
+                    transactionData = await fetchBatchTransactionData(currentTxid);
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        updateConsoleOutput('Job aborted.');
+                        return;
+                    }
+                    console.error('Error fetching batch transaction data, treating as end of file:', error);
+                    break;
+                }
+
+                if (!transactionData || transactionData.length === 0) {
+                    break;
+                }
+
+                for (let txData of transactionData) {
+                    if (txData === "0000000000000000000000000000000000000000000000000000000000000000") {
+                        updateConsoleOutput('End of batch data detected.');
+                        break;
+                    }
+                    await processTransactionData(txData);
+                }
+
+                await appendToSourceBuffer();
+                bufferCount++;
+
+                updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
+                console.log(`Batch size: ${transactionData.length}`);
+                console.log('Batch contents:', transactionData); // Print all items in the batch
+
+                currentTxid = lastProcessedTxid;
+                displayIterationCount += transactionData.length;
+
+                if (transactionData.length < 100) {
+                    updateConsoleOutput(`Warning: Batch contains less than 100 transactions.`);
+                    break;
+                }
+            } else {
+                // Single transaction mode processing...
+                let transactionData;
+                try {
+                    transactionData = await fetchTransactionData(currentTxid);
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        updateConsoleOutput('Job aborted.');
+                        return;
+                    }
+                    console.error('Error fetching transaction data, treating as end of file:', error);
+                    break;
+                }
+
+                await processTransactionData(transactionData);
+                currentTxid = lastProcessedTxid;
+
+                if (iterationCount % 100 === 0) {
+                    updateConsoleOutput(`Iteration ${displayIterationCount}: Processing txid: ${currentTxid}`);
+                }
+                iterationCount++;
+                displayIterationCount++;
+
+                if ((iterationCount >= INITIAL_PLAYBACK_START && iterationCount % BUFFER_UPDATE_INTERVAL === 0) || queue.length === 0) {
+                    await appendToSourceBuffer();
+                    bufferCount++;
+                }
+            }
+        }
+
+        if (queue.length > 0) {
+            await appendToSourceBuffer();
+            bufferCount++;
+        }
+
+        updateConsoleOutput(`Iteration ${displayIterationCount}: Processing completed.`);
+        updateConsoleOutput(`Iteration ${displayIterationCount + 1}: Final processing completed. Audio is now playing.`);
+        createDownloadButton();
+
+    } catch (error) {
+        updateConsoleOutput(`Error: ${error.message}`);
+    } finally {
+        isJobRunning = false;
+    }
+}
+
+async function processTransactionData(transactionData) {
+    let foundNextTxid = false;
+    for (const vout of transactionData.vout) {
+        if (vout.scriptPubKey.asm.startsWith('OP_RETURN')) {
+            const opReturnData = vout.scriptPubKey.asm.split(' ')[1];
+
+            if (opReturnData.length >= 64) {
+                const nextTxid = opReturnData.substring(0, 64);
+                if (nextTxid !== lastProcessedTxid) {
+                    lastProcessedTxid = nextTxid;
+                    foundNextTxid = true;
+                    const fileChunk = opReturnData.substring(64);
+                    fileData += fileChunk;
+                    queue.push(fileChunk);
+                }
+            }
+            break;
+        }
+    }
+    if (!foundNextTxid) {
+        lastProcessedTxid = "0000000000000000000000000000000000000000000000000000000000000000";
+    }
+}
+
+function initializeMediaSource() {
+    mediaSource = new MediaSource();
+    mediaSource.addEventListener('sourceopen', () => {
+        sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+        sourceBuffer.addEventListener('updateend', () => {
+            if (queue.length > 0 && mediaSource.readyState === 'open') {
+                appendToSourceBuffer();
+            }
+        });
+    });
+    createMediaElement();
+}
+
+async function appendToSourceBuffer() {
+    if (!sourceBuffer || sourceBuffer.updating || mediaSource.readyState !== 'open' || queue.length === 0) return;
+
+    try {
+        const fileChunk = queue.shift();
+        if (!fileChunk) {
+            console.error('Received null or empty fileChunk, skipping...');
+            return;
+        }
+
+        const byteArray = new Uint8Array(fileChunk.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        sourceBuffer.appendBuffer(byteArray);
+
+        // Autoplay after a delay if not already playing, only once per song
+        if (!hasStartedPlaying) {
+            setTimeout(() => {
+                if (audioElement.paused) {
+                    audioElement.play().catch(error => {
+                        console.error('Error playing audio:', error);
+                    });
+                }
+            }, 800); // 800 miliseconds delay
+            hasStartedPlaying = true; // Mark as played
+        }
+    } catch (error) {
+        console.error('Error appending buffer:', error);
+    }
+}
+
+
+function createMediaElement() {
+    // Attempt to find the mediaPlayerContainer
+    const container = document.getElementById('mediaPlayerContainer');
+
+    // Log if mediaPlayerContainer is not found
+    if (!container) {
+        updateConsoleOutput('Error: mediaPlayerContainer not found. Cannot append audio element.');
+        console.error('Error: mediaPlayerContainer not found.');
+        return;
+    }
+
+    // Check if audioElement is already created and not removed
+    if (!audioElement) {
+        try {
+            // Create and configure the audio element
+            audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.src = URL.createObjectURL(mediaSource);
+
+            // Ensure audioElement and mediaSource are valid before appending
+            if (audioElement && mediaSource) {
+                container.appendChild(audioElement);
+                updateConsoleOutput('Audio element appended successfully.');
+                console.log('Audio element created and appended successfully.');
+            } else {
+                updateConsoleOutput('Error: audioElement or mediaSource is null.');
+                console.error('Error: audioElement or mediaSource is null.');
+            }
+        } catch (error) {
+            updateConsoleOutput(`Error: Failed to create or append audio element - ${error.message}`);
+            console.error(`Error: Failed to create or append audio element - ${error.message}`);
+        }
+    } else {
+        updateConsoleOutput('Audio element already exists.');
+        console.log('Audio element already exists.');
+    }
+}
+function createDownloadButton() {
+    // Ensure the mediaPlayerContainer exists
+    const container = document.getElementById('mediaPlayerContainer');
+    if (!container) {
+        updateConsoleOutput('Error: mediaPlayerContainer not found.');
+        return;
+    }
+
+    // Remove any existing download button
+    const existingButton = document.getElementById('downloadButton');
+    if (existingButton) {
+        existingButton.remove();
+    }
+
+    // Check if there's any file data to create a download link
+    if (fileData) {
+        const byteArray = new Uint8Array(fileData.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        const blob = new Blob([byteArray], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+
+        const downloadButton = document.createElement('a');
+        downloadButton.id = 'downloadButton';
+        downloadButton.textContent = 'Save mp3 file to computer';
+        downloadButton.href = url;
+        downloadButton.download = `reconstructed_${bufferCount}.mp3`;
+
+        container.appendChild(downloadButton);
+    }
+}
+
+async function resetJob() {
+    if (abortController) {
+        abortController.abort();
+    }
+
+    if (audioElement) {
+        audioElement.pause();
+        audioElement.remove();
+        audioElement = null;
+    }
+
+    if (sourceBuffer && mediaSource.readyState === 'open') {
+        mediaSource.removeSourceBuffer(sourceBuffer);
+    }
+
+    fileData = '';
+    queue = [];
+    bufferCount = 0;
+    hasStartedPlaying = false; // Reset the playback flag
+
+    mediaSource = null;
+    sourceBuffer = null;
+
+    // Remove the existing download button, if any
+    const downloadButton = document.getElementById('downloadButton');
+    if (downloadButton) {
+        downloadButton.remove();
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+}
+
+
+function loadHash(hash) {
+    document.getElementById('txid').value = hash;
+    downloadAndRebuildFile();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('button').addEventListener('click', () => {
+        if (!audioElement) {
+            createMediaElement();
+        }
+    });
+});
+
+</script>
+
+
+</head>
+<body>
+    <h1>Stream MP3 from Blockchain</h1>
+    <label for="txid">Blockchain Transaction ID (txid):</label>
+    <input type="text" id="txid" placeholder="Enter txid here">
+    <select id="cryptoSelect">
+        <option value="nanocheeze">NanoCheeze</option>
+        <option value="litecoin">Litecoin</option>
+    </select>
+    <button onclick="downloadAndRebuildFile()">Stream MP3 from Hash</button>
+    <textarea id="consoleOutput" readonly></textarea>
+    <div class="media-player-container" id="mediaPlayerContainer"></div>
+    <br/><br/>
+    <center>
+        <a href="https://music.nanocheeze.com" target="_top">
+
+            <img src="logo.png" alt="NanoCheeze Music Logo">
+            <br/>music.nanocheeze.com
+        </a>
+    </center>
+<br/><hr/><br/>
+On Chain Songs<br/>
+<ul class="hash-list">
+        <li onclick="loadHash('19ce4852ebcedf934a9a8578a87fc88b32a156db93c44df8732b078a85ed6b0b')">The 6th Sea Legacy.mp3</li>
+
+    
+    <li onclick="loadHash('11a5d2a6436462247f554a6d2206ec82b8020d868dbc3ae9dc246817e8398b39')">Somewhere Out There.mp3</li>
+     <li onclick="loadHash('118133f722142804445b3492a2fb85207f459a9c6820e19922ee5a95722a4fe1')">The Starlight Serenade.mp3</li>
+        <li onclick="loadHash('43e6cf784db7cc9a861989cec5d068baea1fb4d7de4196963d33cadbe9ab140b')">Echoes of the Void.mp3</li>
+        <li onclick="loadHash('11a39341f0ee912c435755e2c6e6b530e6a60b6a4d4724023dc9831be08c4cd4')">World of Melodies.mp3</li>
+    <li onclick="loadHash('53d6dc41e3d235c1aa8b52b0c6a29c2c59f808e6965c1db35c36e52085fa7bd7')">storesongs.mp3</li>
+    <li onclick="loadHash('b362d15ad64f5cc5fc9cb0f7e7217c85f7e696fd10d321e30436af683b37e80e')">blockchainstorage.mp3</li>
+    <li onclick="loadHash('6e18cad879d68a21ec329bb49126b737e960b8383555ca3316f6685133a829e5')">memories.mp3</li>
+    <li onclick="loadHash('8f821cc041feabb254e6aaf370172aee5cb4bee41efd26f4b44ed30711ec407a')">digitalage.mp3</li>
+    <li onclick="loadHash('226bf05565900db138c4bf67563ea07f5cd348e7d46ddb90f87b1eed5d64a7ed')">digitalstride.mp3</li>
+    <li onclick="loadHash('6e8523fa0f0146d0ab889a9810771ecb1659b9fade9d067d4fcc620b30a16d95')">music1.mp3</li>
+    <li onclick="loadHash('53b5272621bb8eb9a69aa56edab417638e75f8891fad3b909885c870569a68c0')">music2.mp3</li>
+    <li onclick="loadHash('4bf72c9b9ff36b1b9ad6a86489c16a2ec2e6056b7b3453cb1f1bcf1a9a891d92')">sync.mp3</li>
+    <li onclick="loadHash('4173d0a7523855f77cbbf728083ad01e933c11bfdb9b4844a17c35c9dcb19fef')">embrace.mp3</li>
+    <li onclick="loadHash('637408538c9e70bb334744c73859f1f73e556a275063f9b6d6e4a5bc8cb4de53')">bright.mp3</li>
+    <li onclick="loadHash('4adc6e132c42bcd8136264eeabd072731fce237f2a9f18cdb529070747a5f7ad')">cosmic.mp3</li>
+    <li onclick="loadHash('157f75b736a07fdaae111bf4d19b3ff400a6f585df86637a75ae9d951590ec03')">hybridtales.mp3</li>
+    <li onclick="loadHash('b9f61d10bbe99df2538ff7eb60166bd26bae7018bc3aefeb081ad602d0f83603')">digitaldreams.mp3</li>
+    <li onclick="loadHash('b7f716e7b627a15d0a420efeafc710e99d53fe5cd927f9ed0b8f80e29ada90b8')">stargate1.mp3</li>
+    <li onclick="loadHash('265ddcdaa32f8dcca4d4bdbb748348e12dd8d7544b991c5b41154340d2383a16')">spacetime2.mp3</li>
+    <li onclick="loadHash('8ab7af0e24c24f89a04050744c5212d631089aaded56d432590b77ab98adeb59')">spacetime1.mp3</li>
+    <li onclick="loadHash('7969be801980a057aa2f46c87cc70991f157b71e5875ab02959fb5d015f719df')">nhi2.mp3</li>
+    <li onclick="loadHash('ca4286502d08f92d1d672900ca06f5d428bdf8f19b77200613117e99cd2f3c0d')">nhi1.mp3</li>
+    <li onclick="loadHash('11a91c429794950288e558cbcd8681c69358f8161acea790d10e146d17b6d560')">nanocheeze1.mp3</li>
+    <li onclick="loadHash('e18c2880b7b21a5ef98d3fbc99360ae989b272f73b6299d405bab4bc29cf747c')">mequavis2.mp3</li>
+    <li onclick="loadHash('1ed0399734b93929f13e4b2bb7b825ed01c2cbee0464a70e53ab56e6251552a2')">mequavis1.mp3</li>
+    <li onclick="loadHash('c63bea94dc76e1d2c3a61aa23766395356e7d7eed4609abff65d882be43d3fe4')">basilisk1.mp3</li>
+    <li onclick="loadHash('931a64b14f78927913ca6e79e4ccf849a532e931c7d0e3b4bb1af26eb33876ed')">basiliisk2.mp3</li>
+    <li onclick="loadHash('22a90acf8d88a401f41be15a5c63be104955b9c20e922d9c18c776a36eec6030')">aiechoes2.mp3</li>
+    <li onclick="loadHash('0a485bf58186ae0865e46a93d790eceb93f62d41865f7b8bf8b9545c31e90ed3')">stargate2.mp3</li>
+    <li onclick="loadHash('2ae261273bfbfbec24860e993a2e8f57ac1c038c19fb2a2edf114a6b78edb7f1')">aistuff.mp3</li>
+    <li onclick="loadHash('3996c1ffb0e0612b5f36f6a7842132bf6f86d6d6d135f3f9b32883831d2dc320')">aistuff2.mp3</li>
+    <li onclick="loadHash('8378a7290a943890db9e4eb6d9456f0b16ca0a0b8696d962c54c539c2f700e48')">depths1.mp3</li>
+    <li onclick="loadHash('633e2a2c394dd2791b2d0227212d852ec0c94c3a4cfa56ada601f669a8486497')">depths2.mp3</li>
+    <li onclick="loadHash('9855d7745d453a7a03a0a74fcd0e627ea1471eeeca0af3329c8ea38cd6a85093')">derp_song.mp3</li>
+    <li onclick="loadHash('675b4513dc13ff9b198ad87115c071b4baf66220af171632d07afa069d5f9777')">nanocheezeai.mp3</li>
+    <li onclick="loadHash('12a8e50cb6e75fa0cf32410d387ec778c08cb44b5d46be5f9911af5c4ab54a2e')">realmofdreams1.mp3</li>
+    <li onclick="loadHash('c6484482fa6fb43ea7400239dbcc3a255900db241264e18e8e201777eadcc052')">realmofdreams2.mp3</li>
+    <li onclick="loadHash('32882ddf34eea292d8345000efd72baaf72913497bf329ad66158c5e4fb99a31')">sawsimulation.mp3</li>
+    <li onclick="loadHash('54e9d2f95f8790933a589ffda3e1b545a199c632bcd2fafe00918b3b0dc0ecd7')">sawsimulation2.mp3</li>
+    <li onclick="loadHash('64c08bbcfdde8f2f60cfe99c521c3603a24affec9c3344cfeea0cd90ef978254')">worldofcheese.mp3</li>
+    <li onclick="loadHash('2c55b9b3ddef2bba5ae6b79ebd349abb38635d77987f0f8700ee91e1a012af37')">worldofmelodies 3.mp3</li>
+    <li onclick="loadHash('71e714f300dee66959dfc0116a9659d86cd5e3b3cf1214a22a5769504940c0af')">worldofmemories.mp3</li>
+    <li onclick="loadHash('899300ba6001940b6392336071300ef8c6a883bb8ce82713350de26de75565f7')">aiechoes.mp3</li>
+</ul>
+
+</body>
+</html>
