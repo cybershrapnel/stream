@@ -657,12 +657,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set the dropdown value based on the prefix
             if (cryptoType === 'N') {
                 document.getElementById('cryptoSelect').value = 'nanocheeze';
+                            // Set the transaction ID in the input field
+            document.getElementById('txid').value = actualTxid;
             } else if (cryptoType === 'L') {
                 document.getElementById('cryptoSelect').value = 'litecoin';
+                            // Set the transaction ID in the input field
+            document.getElementById('txid').value = actualTxid;
             }
 
-            // Set the transaction ID in the input field
-            document.getElementById('txid').value = actualTxid;
+
 
             // Call the function to process the transaction
             downloadAndRebuildFile();
