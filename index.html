@@ -653,10 +653,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleHashChange() {
         let hash = window.location.hash.substring(1); // Remove the '#' part
-
+        let wasDefault=false;
         // Validate hash and adjust if necessary
         if (hash.length !== 65 || (hash.charAt(0) !== 'N' && hash.charAt(0) !== 'L')) {
             hash = defaultTxid; // Set to default if invalid or missing
+            wasDefault=true;
         }
 
         const cryptoType = hash.charAt(0); // Get the first character to determine the crypto type
@@ -670,8 +671,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         document.getElementById('txid').value = actualTxid;
 
+        if(!wasDefault){
         // Automatically start the download process
         downloadAndRebuildFile();
+        }
     }
 
     // Listen for hash changes when the user navigates
