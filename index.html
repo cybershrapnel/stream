@@ -646,30 +646,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-    document.addEventListener('DOMContentLoaded', () => {
-    // Function to handle the hash change or initial load
+document.addEventListener('DOMContentLoaded', () => {
+    // Default hash values and settings
+    const defaultCryptoType = 'N'; // Default to NanoCheeze
+    const defaultTxid = 'N19ce4852ebcedf934a9a8578a87fc88b32a156db93c44df8732b078a85ed6b0b'; // Default transaction ID
+
     function handleHashChange() {
-        const hash = window.location.hash.substring(1); // Remove the '#' part
-        if (hash.length >= 65) { // Ensure it's at least the length of a blockchain hash with prefix
-            const cryptoType = hash.charAt(0); // Get the first character to determine the crypto type
-            const actualTxid = hash.substring(1); // Remove the first character to get the actual txid
+        let hash = window.location.hash.substring(1); // Remove the '#' part
 
-            // Set the dropdown value based on the prefix
-            if (cryptoType === 'N') {
-                document.getElementById('cryptoSelect').value = 'nanocheeze';
-                            // Set the transaction ID in the input field
-            document.getElementById('txid').value = actualTxid;
-            } else if (cryptoType === 'L') {
-                document.getElementById('cryptoSelect').value = 'litecoin';
-                            // Set the transaction ID in the input field
-            document.getElementById('txid').value = actualTxid;
-            }
-
-
-
-            // Call the function to process the transaction
-            downloadAndRebuildFile();
+        // Validate hash and adjust if necessary
+        if (hash.length !== 65 || (hash.charAt(0) !== 'N' && hash.charAt(0) !== 'L')) {
+            hash = defaultTxid; // Set to default if invalid or missing
         }
+
+        const cryptoType = hash.charAt(0); // Get the first character to determine the crypto type
+        const actualTxid = hash.substring(1); // Remove the first character to get the actual txid
+
+        // Set the dropdown value and transaction ID based on the hash
+        if (cryptoType === 'N') {
+            document.getElementById('cryptoSelect').value = 'nanocheeze';
+        } else if (cryptoType === 'L') {
+            document.getElementById('cryptoSelect').value = 'litecoin';
+        }
+        document.getElementById('txid').value = actualTxid;
+
+        // Automatically start the download process
+        downloadAndRebuildFile();
     }
 
     // Listen for hash changes when the user navigates
@@ -678,6 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Also run the function on initial page load in case there is already a hash in the URL
     handleHashChange();
 });
+
 
 </script>
 
