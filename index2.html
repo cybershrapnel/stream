@@ -645,6 +645,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+
+    document.addEventListener('DOMContentLoaded', () => {
+    // Function to handle the hash change or initial load
+    function handleHashChange() {
+        const hash = window.location.hash.substring(1); // Remove the '#' part
+        if (hash.length >= 65) { // Ensure it's at least the length of a blockchain hash with prefix
+            const cryptoType = hash.charAt(0); // Get the first character to determine the crypto type
+            const actualTxid = hash.substring(1); // Remove the first character to get the actual txid
+
+            // Set the dropdown value based on the prefix
+            if (cryptoType === 'N') {
+                document.getElementById('cryptoSelect').value = 'nanocheeze';
+            } else if (cryptoType === 'L') {
+                document.getElementById('cryptoSelect').value = 'litecoin';
+            }
+
+            // Set the transaction ID in the input field
+            document.getElementById('txid').value = actualTxid;
+
+            // Call the function to process the transaction
+            downloadAndRebuildFile();
+        }
+    }
+
+    // Listen for hash changes when the user navigates
+    window.addEventListener('hashchange', handleHashChange);
+
+    // Also run the function on initial page load in case there is already a hash in the URL
+    handleHashChange();
+});
+
 </script>
 
 
