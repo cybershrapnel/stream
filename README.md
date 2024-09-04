@@ -1,7 +1,3 @@
-You're right! Since the script already prompts the user for SSL configuration during runtime, the README should reflect that the SSL configuration is handled interactively by the script, rather than requiring command-line arguments. Here’s the corrected `README.md`:
-
----
-
 # NanoCheeze Blockchain Music Streaming Server
 
 ## Overview
