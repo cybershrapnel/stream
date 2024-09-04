@@ -24,6 +24,8 @@ The server provides a web interface where users can input a transaction ID (txid
 ├── private.key               # Optional SSL private key file (if needed)
 └── README.md                 # This file
 ```
+The old folder is just old junk code for reference, and the ico, png, and html file are for github pages to serve the main files of the public server bridged over to my version of the proxy server so people can demo.
+These 3 files and directory are not needed, The only file you need is server.py or sever.exe from the releases page https://github.com/cybershrapnel/stream/releases/download/main/server.exe
 
 ## How It Works
 
@@ -43,7 +45,7 @@ The server provides a web interface where users can input a transaction ID (txid
 
 ### Step-by-Step Guide
 
-1. **Clone the Repository:**
+1. **Clone the Repository:** (note: you only need to download the server.py file)
    ```bash
    git clone https://github.com/yourusername/nanocheeze-music-streaming.git
    cd nanocheeze-music-streaming
