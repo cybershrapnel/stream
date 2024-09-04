@@ -150,7 +150,7 @@ The MEQUAVIS Java app can handle **any file type**. This means you can upload an
 
 1. **Download the MEQUAVIS Java App**:
    - Obtain the Java application from the official NanoCheeze or MEQUAVIS GitHub repository.
-   - There are several options for installing MEQUAVIS/NanoCheeZe. (The JAVA app is extremely exoerimental)
+   - There are several options for installing MEQUAVIS/NanoCheeZe. (The JAVA app is extremely experimental)
    - https://github.com/cybershrapnel/NanoCheeZe/releases/tag/3.1.2.9
    
 2. **Configure Blockchain Node Access**:
