@@ -174,6 +174,29 @@ In addition, **support for more cryptocurrencies** (such as Feathercoin, Dogecoi
 
 ---
 
+This is a standalone exe that runs the python server.
+
+Must be running Litecoin-qt node with txindex enabled
+
+I will release a new version soon that includes the litecoin exe and a fast sync option to get up and running easy for those that have never ran a node.
+
+put your key and pem file in the same directory as the exe for https support.
+note that running https over localhost will always say your cert is invalid unless you created your cert local for the local loopback.
+
+This is a very early barely functioning release.
+access [https://127.0.0.1:8111/music](https://127.0.0.1:8111/music) if it doesn't load automatically.
+or [http://127.0.0.1:8111/music](http://127.0.0.1:8111/music) if not running ssl
+
+---
+
+To build the server from the server.py file as an exe you will need PyInstaller for python to build the application.
+
+I was not able to build the exe without explicitly including these imports and the hsts bin file. You will need to locate the hstspreload.bin in your actual python directory and change the path accordingly. Just in case anyone wants to build on their own.
+
+python -m PyInstaller --onefile --icon=favicon.ico --hidden-import=httpx --hidden-import=httpx._exceptions --hidden-import=httpx._client --hidden-import=httpx.HTTPStatusError --hidden-import=httpx.RequestError --hidden-import=hstspreload --add-data "C:/Users/user/AppData/Roaming/Python/Python311/site-packages/hstspreload/hstspreload.bin;hstspreload" server.py
+
+---
+
 
 ## License
 
