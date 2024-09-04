@@ -6,6 +6,8 @@ This project is a Python-based FastAPI server that streams MP3 music stored on a
 
 The server provides a web interface where users can input a transaction ID (txid) and stream or download the MP3 file reconstructed from blockchain data. This project supports both HTTP and HTTPS protocols, with the ability to dynamically adjust the protocol depending on your environment.
 
+![image](https://github.com/user-attachments/assets/e1d159d7-8a8f-46cb-8d97-ea4eb04ba552)
+
 ## Features
 
 - **Blockchain Streaming:** Stream MP3 files stored in blockchain transactions using Litecoin or NanoCheeze.
