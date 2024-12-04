@@ -245,14 +245,24 @@ function updateConsoleOutput(message) {
 
 
 async function fetchTransactionData(txid) {
+    let cryptoType = document.getElementById('cryptoSelect').value;
+    console.log(cryptoType);
 
-        let cryptoType = document.getElementById('cryptoSelect').value;
-            console.log(cryptoType);
-    let prefix = cryptoType === 'litecoin' ? 'l' : '';
-                console.log(prefix);
+    // Determine the prefix based on the selected cryptocurrency
+    let prefix = '';
+    if (cryptoType === 'litecoin') {
+        prefix = 'l';
+    } else if (cryptoType === 'gaspcoin') {
+        prefix = 'g';
+    } else if (cryptoType === 'nanocheeze') {
+        prefix = ''; // No prefix for NanoCheeze
+    } else {
+        console.error('Unsupported cryptocurrency type:', cryptoType);
+        throw new Error('Unsupported cryptocurrency type');
+    }
 
     const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getrawtransaction?txid=${txid}&decrypt=1`;
-                console.log(proxyUrl);
+    console.log(proxyUrl);
 
     try {
         const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
@@ -273,10 +283,25 @@ async function fetchTransactionData(txid) {
     }
 }
 
+
 async function fetchBatchTransactionData(startTxid) {
     let cryptoType = document.getElementById('cryptoSelect').value;
-    let prefix = cryptoType === 'litecoin' ? 'l' : '';
+
+    // Determine the prefix based on the selected cryptocurrency
+    let prefix = '';
+    if (cryptoType === 'litecoin') {
+        prefix = 'l';
+    } else if (cryptoType === 'gaspcoin') {
+        prefix = 'g';
+    } else if (cryptoType === 'nanocheeze') {
+        prefix = ''; // No prefix for NanoCheeze
+    } else {
+        console.error('Unsupported cryptocurrency type:', cryptoType);
+        throw new Error('Unsupported cryptocurrency type');
+    }
+
     const proxyUrl = `https://rpc.nanocheeze.com:8111/${prefix}getnext100txids?txid=${startTxid}`;
+    console.log(proxyUrl);
 
     try {
         const response = await fetch(proxyUrl, { method: 'GET', signal: abortController.signal });
@@ -300,6 +325,7 @@ async function fetchBatchTransactionData(startTxid) {
         throw error;
     }
 }
+
 
 
 
@@ -634,6 +660,8 @@ function loadHash(hash) {
         document.getElementById('cryptoSelect').value = 'nanocheeze';
     } else if (cryptoType === 'L') {
         document.getElementById('cryptoSelect').value = 'litecoin';
+    } else if (cryptoType === 'G') {
+        document.getElementById('cryptoSelect').value = 'gaspcoin';
     }
 
     // Set the transaction ID in the input field
@@ -658,31 +686,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultCryptoType = 'N'; // Default to NanoCheeze
     const defaultTxid = 'N19ce4852ebcedf934a9a8578a87fc88b32a156db93c44df8732b078a85ed6b0b'; // Default transaction ID
 
-    function handleHashChange() {
-        let hash = window.location.hash.substring(1); // Remove the '#' part
-        let wasDefault=false;
-        // Validate hash and adjust if necessary
-        if (hash.length !== 65 || (hash.charAt(0) !== 'N' && hash.charAt(0) !== 'L')) {
-            hash = defaultTxid; // Set to default if invalid or missing
-            wasDefault=true;
-        }
+function handleHashChange() {
+    let hash = window.location.hash.substring(1); // Remove the '#' part
+    let wasDefault = false;
+    // Validate hash and adjust if necessary
+    if (hash.length !== 65 || (hash.charAt(0) !== 'N' && hash.charAt(0) !== 'L' && hash.charAt(0) !== 'G')) {
+        hash = defaultTxid; // Set to default if invalid or missing
+        wasDefault = true;
+    }
 
-        const cryptoType = hash.charAt(0); // Get the first character to determine the crypto type
-        const actualTxid = hash.substring(1); // Remove the first character to get the actual txid
+    const cryptoType = hash.charAt(0); // Get the first character to determine the crypto type
+    const actualTxid = hash.substring(1); // Remove the first character to get the actual txid
 
-        // Set the dropdown value and transaction ID based on the hash
-        if (cryptoType === 'N') {
-            document.getElementById('cryptoSelect').value = 'nanocheeze';
-        } else if (cryptoType === 'L') {
-            document.getElementById('cryptoSelect').value = 'litecoin';
-        }
-        document.getElementById('txid').value = actualTxid;
+    // Set the dropdown value and transaction ID based on the hash
+    if (cryptoType === 'N') {
+        document.getElementById('cryptoSelect').value = 'nanocheeze';
+    } else if (cryptoType === 'L') {
+        document.getElementById('cryptoSelect').value = 'litecoin';
+    } else if (cryptoType === 'G') {
+        document.getElementById('cryptoSelect').value = 'gaspcoin';
+    }
+    document.getElementById('txid').value = actualTxid;
 
-        if(!wasDefault){
+    if (!wasDefault) {
         // Automatically start the download process
         downloadAndRebuildFile();
-        }
     }
+}
+
 
     // Listen for hash changes when the user navigates
     window.addEventListener('hashchange', handleHashChange);
@@ -703,6 +734,8 @@ document.addEventListener('DOMContentLoaded', () => {
     <select id="cryptoSelect">
         <option value="nanocheeze">NanoCheeze</option>
         <option value="litecoin">Litecoin</option>
+            <option value="gaspcoin">GASP Coin</option>
+
     </select>
     <button onclick="downloadAndRebuildFile()">Stream MP3 from Hash</button>
     <textarea id="consoleOutput" readonly></textarea>
@@ -717,6 +750,14 @@ document.addEventListener('DOMContentLoaded', () => {
     </center>
 <br/><hr/><br/>
 
+
+GASP Coin Songs
+<ul class="hash-list">
+    <li onclick="loadHash('G755fe30406f67ed4e72b0696fc060c4732e599c2a99bced4cdaf0ee935d4e78e')">GASP Song 1.mp3</li>
+    <li onclick="loadHash('Gdc32cb2d75e5fcad8bca2659189e8c182e8552fdfb0d06a21fc583414f97034b')">GASP Song 2.mp3</li>
+</ul>
+
+    
     Litecoin Chain Songs<br/>
 <ul class="hash-list">
                 <li onclick="loadHash('L5dc123ba65120fda6aae9c5c8ea7c34ccc263fb92a6188bf702c850b471b41a8')">The Tale of Eve, the Storyteller.mp3</li>
