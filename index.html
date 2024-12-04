@@ -530,7 +530,7 @@ async function appendToSourceBuffer() {
         const byteArray = new Uint8Array(fileChunk.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
         sourceBuffer.appendBuffer(byteArray);
 
-        let delay = document.getElementById('cryptoSelect').value === 'nanocheeze' ? 1000 : 2000;  // 3000 ms for NanoCheeze, 9000 ms for Litecoin
+        let delay = document.getElementById('cryptoSelect').value === 'nanocheeze' ? 1000 : 1000;  // 3000 ms for NanoCheeze, 9000 ms for Litecoin
 
         
         // Autoplay after a delay if not already playing, only once per song
